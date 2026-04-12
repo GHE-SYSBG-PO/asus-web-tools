@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dev Tools Hub</title>
+  <meta name="description" content="開發者工具集合：ADA 對比度檢查、CSS 漸層產生器等實用工具">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar__brand">
+        <span class="sidebar__brand-icon">⬡</span>
+        <span class="sidebar__brand-name">Dev Tools</span>
+      </div>
+
+      <nav class="sidebar__nav" role="navigation" aria-label="工具選單">
+        <div class="sidebar__section-label">Design</div>
+        <button class="nav-item nav-item--active" data-tool="ada-contrast" role="tab" aria-selected="true">
+          <span class="nav-item__icon">◑</span>
+          <span class="nav-item__label">ADA Contrast</span>
+          <span class="nav-item__badge">AA/AAA</span>
+        </button>
+        <button class="nav-item" data-tool="linear-gradient" role="tab" aria-selected="false">
+          <span class="nav-item__icon">◆</span>
+          <span class="nav-item__label">Gradient Gen</span>
+          <span class="nav-item__badge">CSS</span>
+        </button>
+      </nav>
+
+      <div class="sidebar__footer">
+        <button class="sidebar__toggle" id="sidebar-toggle" title="收合側邊欄">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content" id="main-content">
+      <!-- Ada Contrast Tool -->
+      <section class="tool-panel" id="panel-ada-contrast" role="tabpanel">
+        <div id="ada-app"></div>
+      </section>
+
+      <!-- Linear Gradient Tool -->
+      <section class="tool-panel hidden" id="panel-linear-gradient" role="tabpanel">
+        <div id="gradient-app"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="tools/ada-contrast.js"></script>
+  <script src="tools/linear-gradient.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
