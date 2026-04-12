@@ -335,7 +335,7 @@
 
     dom.ind.style.transform = `translate(-50%, -100%) rotate(${state.angle}deg)`;
     if(document.activeElement !== dom.angIn) dom.angIn.value = state.angle;
-    dom.out.textContent = `${buildCSS()};`;
+    dom.out.textContent = `${buildCSS()}`;
   }
 
   function render() {
@@ -407,7 +407,7 @@
     // Angle & Output
     dom.ind.style.transform = `translate(-50%, -100%) rotate(${state.angle}deg)`;
     dom.angIn.value = state.angle;
-    dom.out.textContent = `${buildCSS()};`;
+    dom.out.textContent = `${buildCSS()}`;
 
     dom.angGrp.classList.toggle('lg-hidden', !isGrad());
     dom.addBtn.classList.toggle('lg-hidden', !isGrad());
