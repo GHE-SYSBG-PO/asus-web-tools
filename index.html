@@ -31,6 +31,12 @@
           <span class="nav-item__label">Gradient Gen</span>
           <span class="nav-item__badge">CSS</span>
         </button>
+        <div class="sidebar__section-label">Utils</div>
+        <button class="nav-item" data-tool="fake-bookmarks" role="tab" aria-selected="false">
+          <span class="nav-item__icon">☆</span>
+          <span class="nav-item__label">Fake Bookmarks</span>
+          <span class="nav-item__badge">CMD</span>
+        </button>
       </nav>
 
       <div class="sidebar__footer">
@@ -53,11 +59,17 @@
       <section class="tool-panel hidden" id="panel-linear-gradient" role="tabpanel">
         <div id="gradient-app"></div>
       </section>
+
+      <!-- Fake Bookmarks Tool -->
+      <section class="tool-panel hidden" id="panel-fake-bookmarks" role="tabpanel">
+        <div id="fake-bookmarks-app"></div>
+      </section>
     </main>
   </div>
 
   <script src="tools/ada-contrast.js"></script>
   <script src="tools/linear-gradient.js"></script>
+  <script src="tools/fake-bookmarks.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
