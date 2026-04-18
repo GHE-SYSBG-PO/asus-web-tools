@@ -26,10 +26,16 @@
           <span class="nav-item__label">ADA Contrast</span>
           <span class="nav-item__badge">AA/AAA</span>
         </button>
+        <div class="sidebar__section-label">AEM Module</div>
         <button class="nav-item" data-tool="linear-gradient" role="tab" aria-selected="false">
           <span class="nav-item__icon">◆</span>
           <span class="nav-item__label">Gradient Gen</span>
           <span class="nav-item__badge">CSS</span>
+        </button>
+        <button class="nav-item" data-tool="excel-to-json" role="tab" aria-selected="false">
+          <span class="nav-item__icon">⬕</span>
+          <span class="nav-item__label">Excel 轉 JSON</span>
+          <span class="nav-item__badge">JSON</span>
         </button>
         <div class="sidebar__section-label">Utils</div>
         <button class="nav-item" data-tool="fake-bookmarks" role="tab" aria-selected="false">
@@ -60,6 +66,11 @@
         <div id="gradient-app"></div>
       </section>
 
+      <!-- Excel to JSON Tool -->
+      <section class="tool-panel hidden" id="panel-excel-to-json" role="tabpanel">
+        <div id="excel-to-json-app"></div>
+      </section>
+
       <!-- Fake Bookmarks Tool -->
       <section class="tool-panel hidden" id="panel-fake-bookmarks" role="tabpanel">
         <div id="fake-bookmarks-app"></div>
@@ -69,6 +80,7 @@
 
   <script src="tools/ada-contrast.js"></script>
   <script src="tools/linear-gradient.js"></script>
+  <script src="tools/excel-to-json.js"></script>
   <script src="tools/fake-bookmarks.js"></script>
   <script src="app.js"></script>
 </body>
