@@ -16,7 +16,7 @@
 
   --text-primary: #f0f0f5;
   --text-secondary: #8888a0;
-  --text-muted: #55556a;
+  --text-muted: #fff;
 
   --accent: #8b5cf6;
   --accent-glow: rgba(139, 92, 246, 0.2);
@@ -139,6 +139,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text-muted);
+  margin-top: 26px;
   padding: 0 8px 8px;
   white-space: nowrap;
   transition: opacity var(--sidebar-transition);

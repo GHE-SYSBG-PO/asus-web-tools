@@ -226,7 +226,7 @@
   }
 
   // 載入 JSON
-  fetch('./modules.json')
+  fetch('./public/fake-bookmarks/modules.json')
     .then(res => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return res.json();
