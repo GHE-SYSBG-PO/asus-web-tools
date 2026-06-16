@@ -131,6 +131,207 @@
       color: #ef4444;
       font-weight: bold;
     }
+
+    #excel-to-json-app .json-html-group {
+      margin-top: 28px;
+      padding: 20px;
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+    }
+
+    #excel-to-json-app .json-html-group h3 {
+      margin: 0 0 12px;
+      font-size: 1.15rem;
+      color: var(--text-primary);
+    }
+
+    #excel-to-json-app textarea {
+      width: 100%;
+      min-height: 220px;
+      resize: vertical;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+
+    #excel-to-json-app .action-row {
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    #excel-to-json-app .action-btn {
+      padding: 8px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    #excel-to-json-app .action-btn:hover {
+      border-color: var(--accent);
+      background: var(--bg-glass-hover);
+    }
+
+    #excel-to-json-app .action-btn.primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: transparent;
+    }
+
+    #excel-to-json-app .action-btn.primary:hover {
+      background: var(--accent-2);
+    }
+
+    #excel-to-json-app .status {
+      margin-top: 10px;
+      font-size: 0.92rem;
+      color: var(--text-secondary);
+    }
+
+    #excel-to-json-app .status.ok {
+      color: #10b981;
+    }
+
+    #excel-to-json-app .status.bad {
+      color: #ef4444;
+    }
+
+    #excel-to-json-app .preview-wrap {
+      margin-top: 16px;
+    }
+
+    #excel-to-json-app .preview-wrap label {
+      margin-bottom: 8px;
+    }
+
+    #excel-to-json-app .html-preview {
+      width: 100%;
+      min-height: 280px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      background: #fff;
+      padding: 14px;
+      overflow-x: auto;
+    }
+
+    #excel-to-json-app .html-preview .comparison-toolbar {
+      display: flex;
+      justify-content: flex-start;
+      align-items: flex-end;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    #excel-to-json-app .html-preview .comparison-spec-spacer {
+      flex: 0 0 28%;
+      min-width: 220px;
+    }
+
+    #excel-to-json-app .html-preview .comparison-selectors {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      flex: 1;
+    }
+
+    #excel-to-json-app .html-preview .comparison-add-slot {
+      flex: 0 0 auto;
+      min-width: 180px;
+    }
+
+    #excel-to-json-app .html-preview .comparison-selector-item {
+      min-width: 180px;
+      flex: 1;
+    }
+
+    #excel-to-json-app .html-preview .comparison-selector-item label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    #excel-to-json-app .html-preview .comparison-product-select {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 8px;
+      background: #fff;
+      color: #111827;
+    }
+
+    #excel-to-json-app .html-preview .comparison-add-btn {
+      border: 1px solid #d1d5db;
+      background: #111827;
+      color: #fff;
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      height: 40px;
+      width: 100%;
+    }
+
+    #excel-to-json-app .html-preview .comparison-add-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #excel-to-json-app .html-preview .comparison-category {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+
+    #excel-to-json-app .html-preview .comparison-category > summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 12px 14px;
+      background: #f9fafb;
+      color: #111827;
+      font-weight: 700;
+    }
+
+    #excel-to-json-app .html-preview .comparison-category > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    #excel-to-json-app .html-preview .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      color: #111827;
+      background: #fff;
+    }
+
+    #excel-to-json-app .html-preview .comparison-table th,
+    #excel-to-json-app .html-preview .comparison-table td {
+      border: 1px solid #e5e7eb;
+      padding: 10px;
+      vertical-align: top;
+      text-align: left;
+    }
+
+    #excel-to-json-app .html-preview .comparison-table thead th {
+      background: #f3f4f6;
+    }
+
+    #excel-to-json-app .html-preview .comparison-table tbody tr[data-hidden="true"] {
+      opacity: 0.55;
+    }
     
     @media (max-width: 640px) {
       #excel-to-json-app {
@@ -167,6 +368,29 @@
           <button id="copy-btn" class="copy-btn">複製 JSON</button>
         </div>
         <pre id="json-output">等待上傳資料...</pre>
+      </div>
+
+      <div class="json-html-group">
+        <h3>JSON 轉 HTML（Category 可收合 + Spec Table）</h3>
+        <label for="json-input">貼上 JSON：</label>
+        <textarea id="json-input" placeholder="請貼上 { products: [], rows: [] } JSON"></textarea>
+        <div class="action-row">
+          <button id="convert-json-btn" class="action-btn primary">驗證並轉換 HTML</button>
+          <button id="copy-html-btn" class="action-btn" style="display:none;">複製 HTML</button>
+        </div>
+        <div id="json-status" class="status">等待貼上 JSON...</div>
+
+        <div class="output-group" aria-live="polite">
+          <div class="output-header">
+            <label for="html-output">輸出 HTML：</label>
+          </div>
+          <pre id="html-output">尚未轉換</pre>
+        </div>
+
+        <div class="preview-wrap">
+          <label for="html-preview">HTML 預覽：</label>
+          <div id="html-preview" class="html-preview"></div>
+        </div>
       </div>
     </div>
   `;
@@ -249,6 +473,444 @@
       };
     }
 
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function toCellHtml(value) {
+      return escapeHtml(value).replace(/\r?\n/g, '<br>');
+    }
+
+    function validateComparisonJson(data) {
+      const errors = [];
+
+      if (!data || typeof data !== 'object') {
+        errors.push('根節點必須是物件。');
+        return errors;
+      }
+
+      if (!Array.isArray(data.products) || data.products.length === 0) {
+        errors.push('products 必須是非空陣列。');
+      } else if (data.products.some(p => typeof p !== 'string')) {
+        errors.push('products 內每一項都必須是字串。');
+      }
+
+      if (!Array.isArray(data.rows) || data.rows.length === 0) {
+        errors.push('rows 必須是非空陣列。');
+        return errors;
+      }
+
+      data.rows.forEach((row, index) => {
+        const rowNo = index + 1;
+        if (!row || typeof row !== 'object') {
+          errors.push(`rows[${rowNo}] 必須是物件。`);
+          return;
+        }
+
+        if (row.type !== 'category' && row.type !== 'spec') {
+          errors.push(`rows[${rowNo}] 的 type 只能是 category 或 spec。`);
+          return;
+        }
+
+        if (typeof row.name !== 'string' || !row.name.trim()) {
+          errors.push(`rows[${rowNo}] 的 name 必須是非空字串。`);
+        }
+
+        if (row.type === 'spec') {
+          if (!Array.isArray(row.values)) {
+            errors.push(`rows[${rowNo}] 是 spec 時，values 必須是陣列。`);
+            return;
+          }
+
+          if (Array.isArray(data.products) && row.values.length !== data.products.length) {
+            errors.push(`rows[${rowNo}] 的 values 長度 (${row.values.length}) 必須等於 products 長度 (${data.products.length})。`);
+          }
+        }
+      });
+
+      return errors;
+    }
+
+    function convertJsonToHtml(data) {
+      const sections = [];
+      let current = null;
+
+      data.rows.forEach((row) => {
+        if (row.type === 'category') {
+          current = { name: row.name, specs: [] };
+          sections.push(current);
+          return;
+        }
+
+        if (!current) {
+          current = { name: 'General', specs: [] };
+          sections.push(current);
+        }
+
+        current.specs.push(row);
+      });
+
+      const inlineData = JSON.stringify({
+        products: data.products,
+        sections
+      }).replace(/</g, '\\u003c');
+
+      return [
+        '<section class="comparison-module">',
+        '  <div class="comparison-toolbar">',
+        '    <div class="comparison-spec-spacer" aria-hidden="true"></div>',
+        '    <div class="comparison-selectors" aria-label="產品選擇"></div>',
+        '    <div class="comparison-add-slot"></div>',
+        '  </div>',
+        '  <div class="comparison-sections"></div>',
+        '</section>',
+        '<script>',
+        '(function () {',
+        '  const root = document.currentScript.previousElementSibling;',
+        `  const data = ${inlineData};`,
+        '  const selectorsEl = root.querySelector(".comparison-selectors");',
+        '  const sectionsEl = root.querySelector(".comparison-sections");',
+        '  const addSlotEl = root.querySelector(".comparison-add-slot");',
+        '  const maxVisible = Math.min(4, data.products.length);',
+        '  let visible = data.products.length > 1 ? [0, 1] : [0];',
+        '',
+        '  function escapeHtml(text) {',
+        '    return String(text)',
+        '      .replace(/&/g, "&amp;")',
+        '      .replace(/</g, "&lt;")',
+        '      .replace(/>/g, "&gt;")',
+        '      .replace(/\"/g, "&quot;")',
+        '      .replace(/\'/g, "&#39;");',
+        '  }',
+        '',
+        '  function getNextProductIndex() {',
+        '    for (let i = 0; i < data.products.length; i += 1) {',
+        '      if (!visible.includes(i)) return i;',
+        '    }',
+        '    return -1;',
+        '  }',
+        '',
+        '  function buildSelectors() {',
+        '    selectorsEl.innerHTML = "";',
+        '    visible.forEach((productIdx, colIdx) => {',
+        '      const wrap = document.createElement("div");',
+        '      wrap.className = "comparison-selector-item";',
+        '',
+        '      const label = document.createElement("label");',
+        '      label.textContent = `Product ${colIdx + 1}`;',
+        '',
+        '      const select = document.createElement("select");',
+        '      select.className = "comparison-product-select";',
+        '',
+        '      data.products.forEach((name, idx) => {',
+        '        const option = document.createElement("option");',
+        '        option.value = String(idx);',
+        '        option.textContent = name;',
+        '        option.selected = idx === productIdx;',
+        '        select.appendChild(option);',
+        '      });',
+        '',
+        '      select.addEventListener("change", (event) => {',
+        '        const nextIdx = Number(event.target.value);',
+        '        if (Number.isNaN(nextIdx)) return;',
+        '        if (visible.includes(nextIdx)) {',
+        '          event.target.value = String(visible[colIdx]);',
+        '          return;',
+        '        }',
+        '        visible[colIdx] = nextIdx;',
+        '        buildSelectors();',
+        '        buildTables();',
+        '      });',
+        '',
+        '      wrap.appendChild(label);',
+        '      wrap.appendChild(select);',
+        '      selectorsEl.appendChild(wrap);',
+        '    });',
+        '    renderAddControl();',
+        '  }',
+
+        '  function renderAddControl() {',
+        '    addSlotEl.innerHTML = "";',
+        '    const nextIndices = data.products',
+        '      .map((_, idx) => idx)',
+        '      .filter((idx) => !visible.includes(idx));',
+        '',
+        '    if (visible.length >= maxVisible || nextIndices.length === 0) {',
+        '      return;',
+        '    }',
+        '',
+        '    if (visible.length === maxVisible - 1) {',
+        '      const select = document.createElement("select");',
+        '      select.className = "comparison-add-btn";',
+        '',
+        '      const placeholder = document.createElement("option");',
+        '      placeholder.value = "";',
+        '      placeholder.textContent = "Select 4th Product";',
+        '      placeholder.selected = true;',
+        '      placeholder.disabled = true;',
+        '      select.appendChild(placeholder);',
+        '',
+        '      nextIndices.forEach((idx) => {',
+        '        const option = document.createElement("option");',
+        '        option.value = String(idx);',
+        '        option.textContent = data.products[idx];',
+        '        select.appendChild(option);',
+        '      });',
+        '',
+        '      select.addEventListener("change", (event) => {',
+        '        const nextIdx = Number(event.target.value);',
+        '        if (Number.isNaN(nextIdx)) return;',
+        '        visible.push(nextIdx);',
+        '        buildSelectors();',
+        '        buildTables();',
+        '      });',
+        '',
+        '      addSlotEl.appendChild(select);',
+        '      return;',
+        '    }',
+        '',
+        '    const addBtn = document.createElement("button");',
+        '    addBtn.type = "button";',
+        '    addBtn.className = "comparison-add-btn";',
+        '    addBtn.textContent = "Add Product";',
+        '    addBtn.addEventListener("click", () => {',
+        '      const next = getNextProductIndex();',
+        '      if (next === -1) return;',
+        '      visible.push(next);',
+        '      buildSelectors();',
+        '      buildTables();',
+        '    });',
+        '    addSlotEl.appendChild(addBtn);',
+        '  }',
+        '',
+        '  function buildTables() {',
+        '    const valueWidth = visible.length > 0 ? (72 / visible.length).toFixed(4) : 72;',
+        '    const colgroupHtml = [',
+        '      `<col style="width: 28%;">`,',
+        '      ...visible.map(() => `<col style="width: ${valueWidth}%;">`)',
+        '    ].join("");',
+        '',
+        '    const sectionsHtml = data.sections.map((section) => {',
+        '      const rowsHtml = section.specs.map((spec) => {',
+        '        const hiddenAttr = String(spec.hidden || "").toUpperCase() === "TRUE" ? " data-hidden=\"true\"" : "";',
+        '        const valueCols = visible',
+        '          .map((idx) => {',
+        '            const rawValue = spec.values && spec.values[idx] !== undefined ? spec.values[idx] : "";',
+        '            return `<td>${escapeHtml(rawValue).replace(/\\r?\\n/g, "<br>")}</td>`;',
+        '          })',
+        '          .join("");',
+        '',
+        '        return `<tr${hiddenAttr}><th scope="row">${escapeHtml(spec.name)}</th>${valueCols}</tr>`;',
+        '      }).join("");',
+        '',
+        '      return [',
+        '        "<details class=\"comparison-category\" open>",',
+        '        `  <summary>${escapeHtml(section.name)}</summary>`,',
+        '        "  <table class=\"comparison-table\">",',
+        '        `    <colgroup>${colgroupHtml}</colgroup>`,',
+        '        `    <tbody>${rowsHtml}</tbody>`,',
+        '        "  </table>",',
+        '        "</details>"',
+        '      ].join("\\n");',
+        '    }).join("\\n\\n");',
+        '',
+        '    sectionsEl.innerHTML = sectionsHtml;',
+        '  }',
+        '',
+        '  buildSelectors();',
+        '  buildTables();',
+        '})();',
+        '</script>'
+      ].join('\n');
+    }
+
+    function buildComparisonSections(rows) {
+      const sections = [];
+      let current = null;
+
+      rows.forEach((row) => {
+        if (row.type === 'category') {
+          current = { name: row.name, specs: [] };
+          sections.push(current);
+          return;
+        }
+
+        if (!current) {
+          current = { name: 'General', specs: [] };
+          sections.push(current);
+        }
+
+        current.specs.push(row);
+      });
+
+      return sections;
+    }
+
+    function renderInteractivePreview(data, mountEl) {
+      const sections = buildComparisonSections(data.rows);
+      let visible = data.products.length > 1 ? [0, 1] : [0];
+
+      mountEl.innerHTML = [
+        '<section class="comparison-module">',
+        '  <div class="comparison-toolbar">',
+        '    <div class="comparison-spec-spacer" aria-hidden="true"></div>',
+        '    <div class="comparison-selectors" aria-label="產品選擇"></div>',
+        '    <div class="comparison-add-slot"></div>',
+        '  </div>',
+        '  <div class="comparison-sections"></div>',
+        '</section>'
+      ].join('');
+
+      const selectorsEl = mountEl.querySelector('.comparison-selectors');
+      const sectionsEl = mountEl.querySelector('.comparison-sections');
+      const addSlotEl = mountEl.querySelector('.comparison-add-slot');
+      const maxVisible = Math.min(4, data.products.length);
+
+      function getNextProductIndex() {
+        for (let i = 0; i < data.products.length; i += 1) {
+          if (!visible.includes(i)) return i;
+        }
+        return -1;
+      }
+
+      function buildSelectors() {
+        selectorsEl.innerHTML = '';
+
+        visible.forEach((productIdx, colIdx) => {
+          const wrap = document.createElement('div');
+          wrap.className = 'comparison-selector-item';
+
+          const label = document.createElement('label');
+          label.textContent = `Product ${colIdx + 1}`;
+
+          const select = document.createElement('select');
+          select.className = 'comparison-product-select';
+
+          data.products.forEach((name, idx) => {
+            const option = document.createElement('option');
+            option.value = String(idx);
+            option.textContent = name;
+            option.selected = idx === productIdx;
+            select.appendChild(option);
+          });
+
+          select.addEventListener('change', (event) => {
+            const nextIdx = Number(event.target.value);
+            if (Number.isNaN(nextIdx)) return;
+            if (visible.includes(nextIdx)) {
+              event.target.value = String(visible[colIdx]);
+              return;
+            }
+            visible[colIdx] = nextIdx;
+            buildSelectors();
+            buildTables();
+          });
+
+          wrap.appendChild(label);
+          wrap.appendChild(select);
+          selectorsEl.appendChild(wrap);
+        });
+
+        renderAddControl();
+      }
+
+      function renderAddControl() {
+        addSlotEl.innerHTML = '';
+        const nextIndices = data.products
+          .map((_, idx) => idx)
+          .filter((idx) => !visible.includes(idx));
+
+        if (visible.length >= maxVisible || nextIndices.length === 0) {
+          return;
+        }
+
+        if (visible.length === maxVisible - 1) {
+          const select = document.createElement('select');
+          select.className = 'comparison-add-btn';
+
+          const placeholder = document.createElement('option');
+          placeholder.value = '';
+          placeholder.textContent = 'Select 4th Product';
+          placeholder.selected = true;
+          placeholder.disabled = true;
+          select.appendChild(placeholder);
+
+          nextIndices.forEach((idx) => {
+            const option = document.createElement('option');
+            option.value = String(idx);
+            option.textContent = data.products[idx];
+            select.appendChild(option);
+          });
+
+          select.addEventListener('change', (event) => {
+            const nextIdx = Number(event.target.value);
+            if (Number.isNaN(nextIdx)) return;
+            visible.push(nextIdx);
+            buildSelectors();
+            buildTables();
+          });
+
+          addSlotEl.appendChild(select);
+          return;
+        }
+
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button';
+        addBtn.className = 'comparison-add-btn';
+        addBtn.textContent = 'Add Product';
+        addBtn.addEventListener('click', () => {
+          const next = getNextProductIndex();
+          if (next === -1) return;
+          visible.push(next);
+          buildSelectors();
+          buildTables();
+        });
+        addSlotEl.appendChild(addBtn);
+      }
+
+      function buildTables() {
+        const valueWidth = visible.length > 0 ? (72 / visible.length).toFixed(4) : 72;
+        const colgroupHtml = [
+          `<col style="width: 28%;">`,
+          ...visible.map(() => `<col style="width: ${valueWidth}%;">`)
+        ].join('');
+
+        const sectionHtml = sections.map((section) => {
+          const rowsHtml = section.specs.map((spec) => {
+            const hiddenAttr = String(spec.hidden || '').toUpperCase() === 'TRUE' ? ' data-hidden="true"' : '';
+            const valueCols = visible
+              .map((idx) => {
+                const rawValue = spec.values && spec.values[idx] !== undefined ? spec.values[idx] : '';
+                return `<td>${toCellHtml(rawValue)}</td>`;
+              })
+              .join('');
+
+            return `<tr${hiddenAttr}><th scope="row">${escapeHtml(spec.name)}</th>${valueCols}</tr>`;
+          }).join('');
+
+          return [
+            '<details class="comparison-category" open>',
+            `  <summary>${escapeHtml(section.name)}</summary>`,
+            '  <table class="comparison-table">',
+            `    <colgroup>${colgroupHtml}</colgroup>`,
+            `    <tbody>${rowsHtml}</tbody>`,
+            '  </table>',
+            '</details>'
+          ].join('\n');
+        }).join('\n\n');
+
+        sectionsEl.innerHTML = sectionHtml;
+      }
+
+      buildSelectors();
+      buildTables();
+    }
+
     // 綁定上傳事件
     $('#excel-upload').addEventListener('change', function(e) {
       const file = e.target.files[0];
@@ -312,6 +974,67 @@
       }).catch(err => {
         console.error("複製失敗：", err);
         alert("抱歉，複製失敗，請手動選取文字。");
+      });
+    });
+
+    $('#convert-json-btn').addEventListener('click', function() {
+      const inputText = $('#json-input').value.trim();
+      const statusEl = $('#json-status');
+      const htmlOutputEl = $('#html-output');
+      const copyHtmlBtn = $('#copy-html-btn');
+      const previewEl = $('#html-preview');
+
+      if (!inputText) {
+        statusEl.textContent = '請先貼上 JSON 內容。';
+        statusEl.className = 'status bad';
+        htmlOutputEl.textContent = '尚未轉換';
+        previewEl.innerHTML = '';
+        copyHtmlBtn.style.display = 'none';
+        return;
+      }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(inputText);
+      } catch (error) {
+        statusEl.textContent = `JSON 格式錯誤：${error.message}`;
+        statusEl.className = 'status bad';
+        htmlOutputEl.textContent = '尚未轉換';
+        previewEl.innerHTML = '';
+        copyHtmlBtn.style.display = 'none';
+        return;
+      }
+
+      const errors = validateComparisonJson(parsed);
+      if (errors.length > 0) {
+        statusEl.textContent = `驗證失敗：${errors.join(' | ')}`;
+        statusEl.className = 'status bad';
+        htmlOutputEl.textContent = '尚未轉換';
+        previewEl.innerHTML = '';
+        copyHtmlBtn.style.display = 'none';
+        return;
+      }
+
+      const htmlText = convertJsonToHtml(parsed);
+      htmlOutputEl.textContent = htmlText;
+      renderInteractivePreview(parsed, previewEl);
+      statusEl.textContent = '驗證成功，已產生可收合 Category 的 HTML Table。';
+      statusEl.className = 'status ok';
+      copyHtmlBtn.style.display = 'inline-block';
+    });
+
+    $('#copy-html-btn').addEventListener('click', function() {
+      const htmlText = $('#html-output').textContent;
+      const btn = this;
+
+      navigator.clipboard.writeText(htmlText).then(() => {
+        btn.textContent = '已複製！';
+        setTimeout(() => {
+          btn.textContent = '複製 HTML';
+        }, 2000);
+      }).catch((err) => {
+        console.error('HTML 複製失敗：', err);
+        alert('抱歉，複製失敗，請手動選取文字。');
       });
     });
   };
