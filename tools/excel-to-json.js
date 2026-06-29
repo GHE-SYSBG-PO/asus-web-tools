@@ -332,7 +332,103 @@
     #excel-to-json-app .html-preview .comparison-table tbody tr[data-hidden="true"] {
       opacity: 0.55;
     }
-    
+
+    #excel-to-json-app .html-preview .comparison-link-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid #0ea5e9;
+      color: #0ea5e9;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    #excel-to-json-app .html-preview .comparison-link-btn:hover {
+      background: rgba(14, 165, 233, 0.1);
+    }
+
+    #excel-to-json-app .html-preview .comparison-link-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    #excel-to-json-app .html-preview .comparison-link-item {
+      display: block;
+    }
+
+    #excel-to-json-app .html-preview .comparison-link-row-spacer {
+      height: 38px;
+    }
+
+    #excel-to-json-app .html-preview .custom-select-wrap {
+      position: relative;
+      width: 100%;
+    }
+
+    #excel-to-json-app .html-preview .custom-select-trigger {
+      width: 100%;
+      background: #111827;
+      color: #fff;
+      border: 1px solid #374151;
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      text-align: left;
+      font-family: inherit;
+    }
+
+    #excel-to-json-app .html-preview .custom-select-dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 8px;
+      list-style: none;
+      padding: 4px 0;
+      margin: 0;
+      z-index: 100;
+      display: none;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+
+    #excel-to-json-app .html-preview .custom-select-wrap.is-open .custom-select-dropdown {
+      display: block;
+    }
+
+    #excel-to-json-app .html-preview .custom-option {
+      padding: 10px 14px;
+      cursor: pointer;
+      color: #fff;
+      font-size: 14px;
+      list-style: none;
+    }
+
+    #excel-to-json-app .html-preview .custom-option:hover:not(.is-disabled):not(.is-selected) {
+      color: #3b82f6;
+    }
+
+    #excel-to-json-app .html-preview .custom-option.is-selected {
+      background: #2563eb;
+      color: #fff;
+    }
+
+    #excel-to-json-app .html-preview .custom-option.is-disabled {
+      color: #6b7280;
+      cursor: default;
+    }
+
     @media (max-width: 640px) {
       #excel-to-json-app {
         padding: 16px;
@@ -428,17 +524,27 @@
       const specColumnHidden = cleanKeys[0]; 
       const specColumnName = cleanKeys[1]; 
       
-      // 3. 剩下的欄位才是真正的產品型號
-      const productNames = cleanKeys.slice(2);
+      // 3. 剩下欄位為產品欄，需過濾掉整欄都空白的無效欄位
+      const allProductKeys = cleanKeys.slice(2);
+      const productKeys = allProductKeys.filter((key) => {
+        return rawData.some((row) => {
+          const val = row[key];
+          return val !== undefined && val !== null && String(val).trim() !== "";
+        });
+      });
+      const productNames = productKeys.map((key, idx) => {
+        const name = String(key ?? "").trim();
+        return name || `Product ${idx + 1}`;
+      });
 
       // 4. 迭代每一列資料
-      const formattedRows = rawData.map(row => {
+      const formattedRows = rawData.map((row) => {
         const specHidden = row[specColumnHidden]?.trim() || "";
         const specName = row[specColumnName]?.trim() || "";
 
         // 檢查所有產品欄位是否皆為空值
-        const isCategory = productNames.every(product => {
-          const val = row[product];
+        const isCategory = productKeys.every(productKey => {
+          const val = row[productKey];
           return val === undefined || val === null || String(val).trim() === "";
         });
 
@@ -449,19 +555,18 @@
 
           return {
             type: "category",
-            name: specName,
-            label: specHidden
+            name: specName
           };
         } else {
-          const specValues = productNames.map(product => {
-            const val = row[product];
+          const specValues = productKeys.map(productKey => {
+            const val = row[productKey];
             return (val !== undefined && val !== null && val !== "") ? String(val).trim() : "";
           });
 
           return {
             type: "spec",
-            hidden: specHidden,
             name: specName,
+            hidden: specHidden,
             values: specValues
           };
         }
@@ -483,8 +588,317 @@
     }
 
     function toCellHtml(value) {
-      return escapeHtml(value).replace(/\r?\n/g, '<br>');
+      return escapeHtml(String(value ?? '').replace(/<br\s*\/?>(\s*)/gi, '\n')).replace(/\r?\n/g, '<br>');
     }
+
+    function parseAemColorToken(value) {
+      const raw = value !== undefined && value !== null ? String(value) : '';
+      const match = raw.match(/^\s*\[(\d+)\]\s*/);
+      if (!match) return { token: '', text: raw };
+      return {
+        token: match[1],
+        text: raw.slice(match[0].length)
+      };
+    }
+
+    function getAemTokenStyle(token) {
+      // AEM 可覆寫這些值：可設為 "#7069F6" 或 "linear-gradient(...)"
+      const tokenStyles = {
+        '1': '#7069F6',
+        '2': '#16a34a',
+        '3': 'linear-gradient(90deg, rgb(139, 92, 246) 0%, rgb(59, 130, 246) 100%)'
+      };
+
+      return tokenStyles[String(token || '')] || '';
+    }
+
+    function resolveAemTokenStyle(tokenInfo) {
+      const token = String(tokenInfo?.token || '').trim();
+      const styleValue = getAemTokenStyle(token);
+      if (!token || !styleValue) {
+        return { token: '', type: 'none', value: '' };
+      }
+
+      const isGradient = /^linear-gradient\s*\(/i.test(styleValue);
+      return {
+        token,
+        type: isGradient ? 'gradient' : 'solid',
+        value: styleValue
+      };
+    }
+
+    function applyAemTokenColor(html, tokenInfo, fallbackColor = '') {
+      const resolved = resolveAemTokenStyle(tokenInfo);
+      if (resolved.type === 'gradient') {
+        const className = `aem-color-token aem-gradient-token aem-color-${escapeHtml(resolved.token)}`;
+        const style = `background-image:${escapeHtml(resolved.value)};-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;`;
+        return `<span class="${className}" data-aem-color-token="${escapeHtml(resolved.token)}" data-aem-style-type="gradient" style="${style}">${html}</span>`;
+      }
+
+      if (resolved.type === 'solid') {
+        const className = `aem-color-token aem-color-${escapeHtml(resolved.token)}`;
+        return `<span class="${className}" data-aem-color-token="${escapeHtml(resolved.token)}" data-aem-style-type="solid" style="color:${escapeHtml(resolved.value)};">${html}</span>`;
+      }
+
+      const finalColor = fallbackColor || '';
+      if (!finalColor) return html;
+
+      return `<span class="aem-color-token" style="color:${escapeHtml(finalColor)};">${html}</span>`;
+    }
+
+    function getAemLinkStyle(tokenInfo, fallbackColor = '') {
+      const resolved = resolveAemTokenStyle(tokenInfo);
+      if (resolved.type === 'gradient') {
+        return {
+          classPart: ` aem-color-token aem-gradient-token aem-color-${escapeHtml(resolved.token)}`,
+          dataAttrs: ` data-aem-color-token="${escapeHtml(resolved.token)}" data-aem-style-type="gradient"`,
+          stylePart: ` style="color:#fff; border-color:transparent; background-image:${escapeHtml(resolved.value)};"`
+        };
+      }
+
+      if (resolved.type === 'solid') {
+        return {
+          classPart: ` aem-color-token aem-color-${escapeHtml(resolved.token)}`,
+          dataAttrs: ` data-aem-color-token="${escapeHtml(resolved.token)}" data-aem-style-type="solid"`,
+          stylePart: ` style="color:${escapeHtml(resolved.value)}; border-color:${escapeHtml(resolved.value)};"`
+        };
+      }
+
+      const stylePart = fallbackColor
+        ? ` style="color:${escapeHtml(fallbackColor)}; border-color:${escapeHtml(fallbackColor)};"`
+        : '';
+      return {
+        classPart: '',
+        dataAttrs: '',
+        stylePart
+      };
+    }
+
+    function applyTextColor(html, color, tokenInfo = null) {
+      return applyAemTokenColor(html, tokenInfo, color);
+    }
+
+    function isLinkSpecName(specName) {
+      return String(specName || '').trim().startsWith('/');
+    }
+
+    function getDisplaySpecName(specName) {
+      return String(specName || '').trim().replace(/^\/+/, '') || '-';
+    }
+
+    function normalizeLinkUrl(rawValue) {
+      const safeValue = rawValue !== undefined && rawValue !== null ? String(rawValue).trim() : '';
+      if (!safeValue) return '';
+      const matched = safeValue.match(/https?:\/\/\S+/i);
+      return matched ? matched[0] : safeValue;
+    }
+
+    function getWorkbookFileText(workbook, candidatePaths) {
+      const files = workbook?.files;
+      if (!files) return '';
+
+      const decoder = new TextDecoder('utf-8');
+
+      function toText(entry) {
+        if (!entry) return '';
+        if (typeof entry === 'string') return entry;
+
+        const payload = entry.content ?? entry.data ?? entry._data ?? null;
+        if (typeof payload === 'string') return payload;
+
+        if (payload instanceof ArrayBuffer) {
+          return decoder.decode(new Uint8Array(payload));
+        }
+        if (payload instanceof Uint8Array) {
+          return decoder.decode(payload);
+        }
+        if (Array.isArray(payload)) {
+          return decoder.decode(new Uint8Array(payload));
+        }
+
+        if (typeof entry.asText === 'function') {
+          try {
+            return entry.asText();
+          } catch (error) {
+            return '';
+          }
+        }
+
+        return '';
+      }
+
+      for (const path of candidatePaths) {
+        if (files[path]) {
+          const text = toText(files[path]);
+          if (text) return text;
+        }
+      }
+
+      const fileKeys = Object.keys(files);
+      for (const path of candidatePaths) {
+        const matchedKey = fileKeys.find((key) => key.endsWith(path));
+        if (matchedKey) {
+          const text = toText(files[matchedKey]);
+          if (text) return text;
+        }
+      }
+
+      return '';
+    }
+
+    function parseXml(xmlText) {
+      if (!xmlText) return null;
+      try {
+        return new DOMParser().parseFromString(xmlText, 'application/xml');
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function buildWorkbookColorLookup(workbook, worksheet) {
+      const styleMap = {
+        styleIdToColor: {},
+        addressToColor: {}
+      };
+
+      const stylesXml = getWorkbookFileText(workbook, ['xl/styles.xml', 'styles.xml']);
+      const stylesDoc = parseXml(stylesXml);
+      if (!stylesDoc) return styleMap;
+
+      const fontColors = Array.from(stylesDoc.querySelectorAll('fonts > font')).map((fontNode) => {
+        const colorNode = fontNode.querySelector('color');
+        const rgb = colorNode?.getAttribute('rgb') || colorNode?.getAttribute('argb') || '';
+        return normalizeRgbToHex(rgb);
+      });
+
+      Array.from(stylesDoc.querySelectorAll('cellXfs > xf')).forEach((xfNode, styleId) => {
+        const fontIdRaw = xfNode.getAttribute('fontId');
+        const fontId = fontIdRaw !== null ? Number(fontIdRaw) : NaN;
+        if (!Number.isFinite(fontId)) return;
+        const color = fontColors[fontId] || '';
+        if (color) styleMap.styleIdToColor[styleId] = color;
+      });
+
+      const worksheetRef = worksheet?.['!ref'] || '';
+      const files = workbook?.files ? Object.keys(workbook.files) : [];
+      const sheetCandidates = files
+        .filter((key) => /xl\/worksheets\/sheet\d+\.xml$/i.test(key))
+        .sort();
+
+      let targetSheetXml = '';
+      for (const key of sheetCandidates) {
+        const xml = getWorkbookFileText(workbook, [key]);
+        if (!xml) continue;
+        if (!worksheetRef) {
+          targetSheetXml = xml;
+          break;
+        }
+        const doc = parseXml(xml);
+        const dimRef = doc?.querySelector('dimension')?.getAttribute('ref') || '';
+        if (dimRef === worksheetRef) {
+          targetSheetXml = xml;
+          break;
+        }
+      }
+
+      if (!targetSheetXml && sheetCandidates.length > 0) {
+        targetSheetXml = getWorkbookFileText(workbook, [sheetCandidates[0]]);
+      }
+
+      const sheetDoc = parseXml(targetSheetXml);
+      if (!sheetDoc) return styleMap;
+
+      Array.from(sheetDoc.querySelectorAll('sheetData c[s][r]')).forEach((cellNode) => {
+        const address = cellNode.getAttribute('r') || '';
+        const styleId = Number(cellNode.getAttribute('s'));
+        if (!address || !Number.isFinite(styleId)) return;
+        const color = styleMap.styleIdToColor[styleId] || '';
+        if (color) styleMap.addressToColor[address] = color;
+      });
+
+      return styleMap;
+    }
+
+    function extractColorFromFont(font) {
+      const color = font?.color;
+      if (!color) return '';
+
+      const byRgb = normalizeRgbToHex(color.rgb || color.argb);
+      if (byRgb) return byRgb;
+
+      // theme/indexed 顏色在不同檔案常會還原成預設色，這裡先保留空字串避免錯色
+      return '';
+    }
+
+    function getStyleArrays(workbook) {
+      const styles = workbook?.Styles || workbook?.styles || {};
+      return {
+        cellXfs: styles.CellXf || styles.CellXF || styles.CellXfs || styles.cellXfs || [],
+        fonts: styles.Fonts || styles.fonts || []
+      };
+    }
+
+    function extractFontColor(cell, workbook, address = '') {
+      // Case 1: cell.s 已是完整樣式物件
+      const directColor = extractColorFromFont(cell?.s?.font);
+      if (directColor) return directColor;
+
+      // Case 1.5: cell.s 是樣式物件，但只帶 fontId
+      const inlineFontId = cell?.s?.fontId ?? cell?.s?.FontId;
+      if (inlineFontId !== undefined && inlineFontId !== null) {
+        const { fonts } = getStyleArrays(workbook);
+        const font = fonts[Number(inlineFontId)];
+        const byInlineFontId = extractColorFromFont(font);
+        if (byInlineFontId) return byInlineFontId;
+      }
+
+      // Case 2: cell.s 是樣式索引，需回查 workbook Styles
+      const styleId = typeof cell?.s === 'number' || typeof cell?.s === 'string'
+        ? Number(cell.s)
+        : null;
+      if (styleId !== null && Number.isFinite(styleId) && styleId >= 0) {
+        const { cellXfs, fonts } = getStyleArrays(workbook);
+        const xf = cellXfs[styleId];
+        const fontId = xf?.fontId ?? xf?.FontId;
+        if (fontId !== undefined && fontId !== null) {
+          const font = fonts[Number(fontId)];
+          const styleColor = extractColorFromFont(font);
+          if (styleColor) return styleColor;
+        }
+      }
+
+      // Case 2.5: 直接從 XML 解析到的 address 色彩
+      if (address && workbook?.__addressToColor && workbook.__addressToColor[address]) {
+        return workbook.__addressToColor[address];
+      }
+
+      // Fallback: 某些檔案在樣式解析時只保留 HTML rich text
+      const html = String(cell?.h || '');
+      const m = html.match(/color\s*:\s*(#[0-9a-fA-F]{3,8}|rgb\([^\)]+\))/i);
+      return m ? m[1] : '';
+    }
+
+    function renderPreviewCellHtml(specName, rawValue) {
+      const parsedValue = parseAemColorToken(rawValue);
+      const safeValue = String(parsedValue.text || '').trim();
+      if (!isLinkSpecName(specName)) {
+        return applyTextColor(toCellHtml(safeValue), '', parsedValue);
+      }
+
+      if (!safeValue) return '';
+
+      const safeUrl = escapeHtml(normalizeLinkUrl(safeValue));
+      const safeLabel = escapeHtml(getDisplaySpecName(specName));
+      const linkStyle = getAemLinkStyle(parsedValue, '');
+      return `<a class="comparison-link-btn${linkStyle.classPart}"${linkStyle.dataAttrs}${linkStyle.stylePart} href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeLabel}</a>`;
+    }
+
+    function isTrueFlag(value) {
+      return String(value ?? '').trim().toUpperCase() === 'TRUE';
+    }
+
+    // isTrueFlag 也需在 output script 中定義
+    // (已在 convertJsonToHtml 的 script 字串中包含)
 
     function validateComparisonJson(data) {
       const errors = [];
@@ -537,23 +951,7 @@
     }
 
     function convertJsonToHtml(data) {
-      const sections = [];
-      let current = null;
-
-      data.rows.forEach((row) => {
-        if (row.type === 'category') {
-          current = { name: row.name, specs: [] };
-          sections.push(current);
-          return;
-        }
-
-        if (!current) {
-          current = { name: 'General', specs: [] };
-          sections.push(current);
-        }
-
-        current.specs.push(row);
-      });
+      const sections = buildComparisonSections(data.rows);
 
       const inlineData = JSON.stringify({
         products: data.products,
@@ -561,6 +959,16 @@
       }).replace(/</g, '\\u003c');
 
       return [
+        '<style>',
+        '.comparison-module .custom-select-wrap { position: relative; width: 100%; }',
+        '.comparison-module .custom-select-trigger { width: 100%; background: #111827; color: #fff; border: 1px solid #374151; border-radius: 8px; padding: 8px 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 14px; text-align: left; font-family: inherit; }',
+        '.comparison-module .custom-select-dropdown { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #111827; border: 1px solid #374151; border-radius: 8px; list-style: none; padding: 4px 0; margin: 0; z-index: 100; display: none; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }',
+        '.comparison-module .custom-select-wrap.is-open .custom-select-dropdown { display: block; }',
+        '.comparison-module .custom-option { padding: 10px 14px; cursor: pointer; color: #fff; font-size: 14px; list-style: none; }',
+        '.comparison-module .custom-option:hover:not(.is-disabled):not(.is-selected) { color: #3b82f6; }',
+        '.comparison-module .custom-option.is-selected { background: #2563eb; color: #fff; }',
+        '.comparison-module .custom-option.is-disabled { color: #6b7280; cursor: default; }',
+        '</style>',
         '<section class="comparison-module">',
         '  <div class="comparison-toolbar">',
         '    <div class="comparison-spec-spacer" aria-hidden="true"></div>',
@@ -595,6 +1003,105 @@
         '    return -1;',
         '  }',
         '',
+        '  function isTrueFlag(value) {',
+        '    return String(value !== null && value !== undefined ? value : "").trim().toUpperCase() === "TRUE";',
+        '  }',
+        '',
+        '  function isLinkSpecName(specName) {',
+        '    return String(specName || "").trim().startsWith("/");',
+        '  }',
+        '',
+        '  function getDisplaySpecName(specName) {',
+        '    return String(specName || "").trim().replace(/^\\/+/, "") || "-";',
+        '  }',
+        '',
+        '  function normalizeLinkUrl(rawValue) {',
+        '    const safeValue = rawValue !== undefined && rawValue !== null ? String(rawValue).trim() : "";',
+        '    if (!safeValue) return "";',
+        '    const matched = safeValue.match(/https?:\\/\\/\\S+/i);',
+        '    return matched ? matched[0] : safeValue;',
+        '  }',
+        '',
+        '  function parseAemColorToken(value) {',
+        '    const raw = value !== undefined && value !== null ? String(value) : "";',
+        '    const match = raw.match(/^\\s*\\[(\\d+)\\]\\s*/);',
+        '    if (!match) return { token: "", text: raw };',
+        '    return { token: match[1], text: raw.slice(match[0].length) };',
+        '  }',
+        '',
+        '  function getAemTokenStyle(token) {',
+        '    const tokenStyles = {',
+        '      "1": "#7069F6",',
+        '      "2": "#16a34a",',
+        '      "3": "linear-gradient(90deg, rgb(139, 92, 246) 0%, rgb(59, 130, 246) 100%)"',
+        '    };',
+        '    return tokenStyles[String(token || "")] || "";',
+        '  }',
+        '',
+        '  function resolveAemTokenStyle(tokenInfo) {',
+        '    const token = String((tokenInfo && tokenInfo.token) || "").trim();',
+        '    const styleValue = getAemTokenStyle(token);',
+        '    if (!token || !styleValue) return { token: "", type: "none", value: "" };',
+        '    const isGradient = /^linear-gradient\\s*\\(/i.test(styleValue);',
+        '    return { token, type: isGradient ? "gradient" : "solid", value: styleValue };',
+        '  }',
+        '',
+        '  function applyAemTokenColor(html, tokenInfo, fallbackColor = "") {',
+        '    const resolved = resolveAemTokenStyle(tokenInfo);',
+        '    if (resolved.type === "gradient") {',
+        '      const className = `aem-color-token aem-gradient-token aem-color-${escapeHtml(resolved.token)}`;',
+        '      const style = `background-image:${escapeHtml(resolved.value)};-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;`;',
+        '      return `<span class="${className}" data-aem-color-token="${escapeHtml(resolved.token)}" data-aem-style-type="gradient" style="${style}">${html}</span>`;',
+        '    }',
+        '    if (resolved.type === "solid") {',
+        '      const className = `aem-color-token aem-color-${escapeHtml(resolved.token)}`;',
+        '      return `<span class="${className}" data-aem-color-token="${escapeHtml(resolved.token)}" data-aem-style-type="solid" style="color:${escapeHtml(resolved.value)};">${html}</span>`;',
+        '    }',
+        '    const finalColor = fallbackColor || "";',
+        '    if (!finalColor) return html;',
+        '    return `<span class="aem-color-token" style="color:${escapeHtml(finalColor)};">${html}</span>`;',
+        '  }',
+        '',
+        '  function getAemLinkStyle(tokenInfo, fallbackColor = "") {',
+        '    const resolved = resolveAemTokenStyle(tokenInfo);',
+        '    if (resolved.type === "gradient") {',
+        '      return {',
+        '        classPart: ` aem-color-token aem-gradient-token aem-color-${escapeHtml(resolved.token)}`,',
+        '        dataAttrs: ` data-aem-color-token="${escapeHtml(resolved.token)}" data-aem-style-type="gradient"`,',
+        '        stylePart: ` style="color:#fff; border-color:transparent; background-image:${escapeHtml(resolved.value)};"`',
+        '      };',
+        '    }',
+        '    if (resolved.type === "solid") {',
+        '      return {',
+        '        classPart: ` aem-color-token aem-color-${escapeHtml(resolved.token)}`,',
+        '        dataAttrs: ` data-aem-color-token="${escapeHtml(resolved.token)}" data-aem-style-type="solid"`,',
+        '        stylePart: ` style="color:${escapeHtml(resolved.value)}; border-color:${escapeHtml(resolved.value)};"`',
+        '      };',
+        '    }',
+        '    const stylePart = fallbackColor',
+        '      ? ` style="color:${escapeHtml(fallbackColor)}; border-color:${escapeHtml(fallbackColor)};"`',
+        '      : "";',
+        '    return { classPart: "", dataAttrs: "", stylePart };',
+        '  }',
+        '',
+        '  function renderCellHtml(specName, rawValue, color = "") {',
+        '    const parsedValue = parseAemColorToken(rawValue);',
+        '    const safeValue = String(parsedValue.text || "").trim();',
+        '    if (!isLinkSpecName(specName)) {',
+        '      const html = escapeHtml(safeValue.replace(/<br\\s*\\/?>(\\s*)/gi, "\\n")).replace(/\\r?\\n/g, "<br>");',
+        '      return applyAemTokenColor(html, parsedValue, color);',
+        '    }',
+        '    if (!safeValue) return "";',
+        '    const safeUrl = escapeHtml(normalizeLinkUrl(safeValue));',
+        '    const safeLabel = escapeHtml(getDisplaySpecName(specName));',
+        '    const linkStyle = getAemLinkStyle(parsedValue, color);',
+        '    return `<a class="comparison-link-btn${linkStyle.classPart}"${linkStyle.dataAttrs}${linkStyle.stylePart} href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeLabel}</a>`;',
+        '  }',
+        '',
+        '  function applyTextColor(html, color, tokenInfo = null) {',
+        '    return applyAemTokenColor(html, tokenInfo, color);',
+        '  }',
+        '',
         '  function buildSelectors() {',
         '    selectorsEl.innerHTML = "";',
         '    visible.forEach((productIdx, colIdx) => {',
@@ -604,31 +1111,56 @@
         '      const label = document.createElement("label");',
         '      label.textContent = `Product ${colIdx + 1}`;',
         '',
-        '      const select = document.createElement("select");',
-        '      select.className = "comparison-product-select";',
+        '      const selectWrap = document.createElement("div");',
+        '      selectWrap.className = "custom-select-wrap";',
+        '',
+        '      const trigger = document.createElement("button");',
+        '      trigger.type = "button";',
+        '      trigger.className = "custom-select-trigger";',
+        '      const triggerText = document.createElement("span");',
+        '      triggerText.textContent = data.products[productIdx];',
+        '      const triggerArrow = document.createElement("span");',
+        '      triggerArrow.textContent = "⌄";',
+        '      trigger.appendChild(triggerText);',
+        '      trigger.appendChild(triggerArrow);',
+        '',
+        '      const dropdown = document.createElement("ul");',
+        '      dropdown.className = "custom-select-dropdown";',
         '',
         '      data.products.forEach((name, idx) => {',
-        '        const option = document.createElement("option");',
-        '        option.value = String(idx);',
-        '        option.textContent = name;',
-        '        option.selected = idx === productIdx;',
-        '        select.appendChild(option);',
-        '      });',
+        '        const li = document.createElement("li");',
+        '        li.className = "custom-option";',
+        '        li.textContent = name;',
         '',
-        '      select.addEventListener("change", (event) => {',
-        '        const nextIdx = Number(event.target.value);',
-        '        if (Number.isNaN(nextIdx)) return;',
-        '        if (visible.includes(nextIdx)) {',
-        '          event.target.value = String(visible[colIdx]);',
-        '          return;',
+        '        if (idx === productIdx) {',
+        '          li.classList.add("is-selected");',
+        '        } else if (visible.includes(idx)) {',
+        '          li.classList.add("is-disabled");',
+        '        } else {',
+        '          li.addEventListener("click", () => {',
+        '            visible[colIdx] = idx;',
+        '            selectWrap.classList.remove("is-open");',
+        '            buildSelectors();',
+        '            buildTables();',
+        '          });',
         '        }',
-        '        visible[colIdx] = nextIdx;',
-        '        buildSelectors();',
-        '        buildTables();',
+        '',
+        '        dropdown.appendChild(li);',
         '      });',
         '',
+        '      trigger.addEventListener("click", (e) => {',
+        '        e.stopPropagation();',
+        '        const isOpen = selectWrap.classList.contains("is-open");',
+        '        selectorsEl.querySelectorAll(".custom-select-wrap.is-open").forEach((el) => el.classList.remove("is-open"));',
+        '        if (!isOpen) {',
+        '          selectWrap.classList.add("is-open");',
+        '        }',
+        '      });',
+        '',
+        '      selectWrap.appendChild(trigger);',
+        '      selectWrap.appendChild(dropdown);',
         '      wrap.appendChild(label);',
-        '      wrap.appendChild(select);',
+        '      wrap.appendChild(selectWrap);',
         '      selectorsEl.appendChild(wrap);',
         '    });',
         '    renderAddControl();',
@@ -696,17 +1228,58 @@
         '    ].join("");',
         '',
         '    const sectionsHtml = data.sections.map((section) => {',
-        '      const rowsHtml = section.specs.map((spec) => {',
+        '      const rows = [];',
+        '      for (let i = 0; i < section.specs.length; i += 1) {',
+        '        const spec = section.specs[i];',
         '        const hiddenAttr = String(spec.hidden || "").toUpperCase() === "TRUE" ? " data-hidden=\"true\"" : "";',
+        '',
+        '        if (isLinkSpecName(spec.name)) {',
+        '          const linkGroup = [spec];',
+        '          let j = i + 1;',
+        '          while (j < section.specs.length && isLinkSpecName(section.specs[j].name)) {',
+        '            linkGroup.push(section.specs[j]);',
+        '            j += 1;',
+        '          }',
+        '',
+        '          const span = linkGroup.length;',
+        '          const linkCols = visible',
+        '            .map((idx) => {',
+        '              const buttons = linkGroup',
+        '                .map((linkSpec) => {',
+        '                  const rawValue = linkSpec.values && linkSpec.values[idx] !== undefined ? linkSpec.values[idx] : "";',
+        '                  const anchor = renderCellHtml(linkSpec.name, rawValue, "");',
+        '                  return anchor ? `<div class="comparison-link-item">${anchor}</div>` : "";',
+        '                })',
+        '                .filter(Boolean)',
+        '                .join("");',
+        '',
+        '              return `<td rowspan="${span}"><div class="comparison-link-group">${buttons}</div></td>`;',
+        '            })',
+        '            .join("");',
+        '',
+        '          rows.push(`<tr${hiddenAttr}><th scope="row" rowspan="${span}"></th>${linkCols}</tr>`);',
+        '          for (let r = 1; r < span; r += 1) {',
+        '            rows.push("<tr class=\"comparison-link-row-spacer\"></tr>");',
+        '          }',
+        '',
+        '          i = j - 1;',
+        '          continue;',
+        '        }',
+        '',
         '        const valueCols = visible',
         '          .map((idx) => {',
         '            const rawValue = spec.values && spec.values[idx] !== undefined ? spec.values[idx] : "";',
-        '            return `<td>${escapeHtml(rawValue).replace(/\\r?\\n/g, "<br>")}</td>`;',
+        '            return `<td>${renderCellHtml(spec.name, rawValue, "")}</td>`;',
         '          })',
         '          .join("");',
         '',
-        '        return `<tr${hiddenAttr}><th scope="row">${escapeHtml(spec.name)}</th>${valueCols}</tr>`;',
-        '      }).join("");',
+        '        const parsedSpecName = parseAemColorToken(spec.name);',
+        '        const cleanSpecName = getDisplaySpecName(parsedSpecName.text);',
+        '        const headerText = applyTextColor(escapeHtml(cleanSpecName), "", parsedSpecName);',
+        '        rows.push(`<tr${hiddenAttr}><th scope="row">${headerText}</th>${valueCols}</tr>`);',
+        '      }',
+        '',
+        '      const rowsHtml = rows.join("");',
         '',
         '      return [',
         '        "<details class=\"comparison-category\" open>",',
@@ -721,6 +1294,10 @@
         '',
         '    sectionsEl.innerHTML = sectionsHtml;',
         '  }',
+        '',
+        '  document.addEventListener("click", () => {',
+        '    root.querySelectorAll(".custom-select-wrap.is-open").forEach((el) => el.classList.remove("is-open"));',
+        '  });',
         '',
         '  buildSelectors();',
         '  buildTables();',
@@ -745,7 +1322,7 @@
           sections.push(current);
         }
 
-        current.specs.push(row);
+        current.specs.push({ ...row });
       });
 
       return sections;
@@ -765,6 +1342,13 @@
         '  <div class="comparison-sections"></div>',
         '</section>'
       ].join('');
+
+      if (!mountEl._hasClickOutside) {
+        mountEl._hasClickOutside = true;
+        document.addEventListener('click', () => {
+          mountEl.querySelectorAll('.custom-select-wrap.is-open').forEach((el) => el.classList.remove('is-open'));
+        });
+      }
 
       const selectorsEl = mountEl.querySelector('.comparison-selectors');
       const sectionsEl = mountEl.querySelector('.comparison-sections');
@@ -788,31 +1372,56 @@
           const label = document.createElement('label');
           label.textContent = `Product ${colIdx + 1}`;
 
-          const select = document.createElement('select');
-          select.className = 'comparison-product-select';
+          const selectWrap = document.createElement('div');
+          selectWrap.className = 'custom-select-wrap';
+
+          const trigger = document.createElement('button');
+          trigger.type = 'button';
+          trigger.className = 'custom-select-trigger';
+          const triggerText = document.createElement('span');
+          triggerText.textContent = data.products[productIdx];
+          const triggerArrow = document.createElement('span');
+          triggerArrow.textContent = '⌄';
+          trigger.appendChild(triggerText);
+          trigger.appendChild(triggerArrow);
+
+          const dropdown = document.createElement('ul');
+          dropdown.className = 'custom-select-dropdown';
 
           data.products.forEach((name, idx) => {
-            const option = document.createElement('option');
-            option.value = String(idx);
-            option.textContent = name;
-            option.selected = idx === productIdx;
-            select.appendChild(option);
-          });
+            const li = document.createElement('li');
+            li.className = 'custom-option';
+            li.textContent = name;
 
-          select.addEventListener('change', (event) => {
-            const nextIdx = Number(event.target.value);
-            if (Number.isNaN(nextIdx)) return;
-            if (visible.includes(nextIdx)) {
-              event.target.value = String(visible[colIdx]);
-              return;
+            if (idx === productIdx) {
+              li.classList.add('is-selected');
+            } else if (visible.includes(idx)) {
+              li.classList.add('is-disabled');
+            } else {
+              li.addEventListener('click', () => {
+                visible[colIdx] = idx;
+                selectWrap.classList.remove('is-open');
+                buildSelectors();
+                buildTables();
+              });
             }
-            visible[colIdx] = nextIdx;
-            buildSelectors();
-            buildTables();
+
+            dropdown.appendChild(li);
           });
 
+          trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = selectWrap.classList.contains('is-open');
+            selectorsEl.querySelectorAll('.custom-select-wrap.is-open').forEach((el) => el.classList.remove('is-open'));
+            if (!isOpen) {
+              selectWrap.classList.add('is-open');
+            }
+          });
+
+          selectWrap.appendChild(trigger);
+          selectWrap.appendChild(dropdown);
           wrap.appendChild(label);
-          wrap.appendChild(select);
+          wrap.appendChild(selectWrap);
           selectorsEl.appendChild(wrap);
         });
 
@@ -881,17 +1490,59 @@
         ].join('');
 
         const sectionHtml = sections.map((section) => {
-          const rowsHtml = section.specs.map((spec) => {
-            const hiddenAttr = String(spec.hidden || '').toUpperCase() === 'TRUE' ? ' data-hidden="true"' : '';
+          const rows = [];
+          for (let i = 0; i < section.specs.length; i += 1) {
+            const spec = section.specs[i];
+            if (isLinkSpecName(spec.name)) {
+              const allLinkSpecs = [spec];
+              let j = i + 1;
+              while (j < section.specs.length && isLinkSpecName(section.specs[j].name)) {
+                allLinkSpecs.push(section.specs[j]);
+                j += 1;
+              }
+              i = j - 1;
+
+              const linkGroup = allLinkSpecs.filter(s => !isTrueFlag(s.hidden));
+              if (linkGroup.length === 0) continue;
+
+              const span = linkGroup.length;
+              const linkCols = visible
+                .map((idx) => {
+                  const buttons = linkGroup
+                    .map((linkSpec) => {
+                      const rawValue = linkSpec.values && linkSpec.values[idx] !== undefined ? linkSpec.values[idx] : '';
+                      const anchor = renderPreviewCellHtml(linkSpec.name, rawValue);
+                      return anchor ? `<div class="comparison-link-item">${anchor}</div>` : '';
+                    })
+                    .filter(Boolean)
+                    .join('');
+
+                  return `<td rowspan="${span}"><div class="comparison-link-group">${buttons}</div></td>`;
+                })
+                .join('');
+
+              rows.push(`<tr><th scope="row" rowspan="${span}"></th>${linkCols}</tr>`);
+              for (let r = 1; r < span; r += 1) {
+                rows.push('<tr class="comparison-link-row-spacer"></tr>');
+              }
+
+              continue;
+            }
+
             const valueCols = visible
               .map((idx) => {
                 const rawValue = spec.values && spec.values[idx] !== undefined ? spec.values[idx] : '';
-                return `<td>${toCellHtml(rawValue)}</td>`;
+                return `<td>${renderPreviewCellHtml(spec.name, rawValue)}</td>`;
               })
               .join('');
 
-            return `<tr${hiddenAttr}><th scope="row">${escapeHtml(spec.name)}</th>${valueCols}</tr>`;
-          }).join('');
+            const parsedSpecName = parseAemColorToken(spec.name);
+            const cleanSpecName = getDisplaySpecName(parsedSpecName.text);
+            const headerText = applyTextColor(escapeHtml(cleanSpecName), '', parsedSpecName);
+            rows.push(`<tr><th scope="row">${headerText}</th>${valueCols}</tr>`);
+          }
+
+          const rowsHtml = rows.join('');
 
           return [
             '<details class="comparison-category" open>',
@@ -911,6 +1562,23 @@
       buildTables();
     }
 
+    function countAemTokens(data) {
+      if (!data || !Array.isArray(data.rows)) return 0;
+      let count = 0;
+      data.rows.forEach((row) => {
+        if (row.type !== 'spec') return;
+        const nameParsed = parseAemColorToken(row.name || '');
+        if (nameParsed.token) count += 1;
+        if (Array.isArray(row.values)) {
+          row.values.forEach((v) => {
+            const valueParsed = parseAemColorToken(v || '');
+            if (valueParsed.token) count += 1;
+          });
+        }
+      });
+      return count;
+    }
+
     // 綁定上傳事件
     $('#excel-upload').addEventListener('change', function(e) {
       const file = e.target.files[0];
@@ -919,12 +1587,11 @@
       const reader = new FileReader();
       const outputEl = $('#json-output');
       const copyBtn = $('#copy-btn');
+      const statusEl = $('#json-status');
 
       reader.onload = function(event) {
         try {
           const data = new Uint8Array(event.target.result);
-          
-          // 讀取時加入 raw: true，避免 CSV 的 16:9 被誤判為時間
           const workbook = XLSX.read(data, { type: 'array', raw: true });
           
           const firstSheetName = workbook.SheetNames[0];
@@ -940,8 +1607,21 @@
           }
 
           // 執行資料清洗
-          const finalJson = formatSpecData(rawJson);
-          outputEl.textContent = JSON.stringify(finalJson, null, 2);
+          const finalOutputJson = formatSpecData(rawJson);
+
+          outputEl.textContent = JSON.stringify(finalOutputJson, null, 2);
+          const htmlText = convertJsonToHtml(finalOutputJson);
+          $('#html-output').textContent = htmlText;
+          renderInteractivePreview(finalOutputJson, $('#html-preview'));
+
+          const tokenCount = countAemTokens(finalOutputJson);
+          if (tokenCount > 0) {
+            statusEl.textContent = `Excel 轉換完成，已偵測 ${tokenCount} 個 AEM 色碼標記（[1]/[2]/[3]，每個 token 可在 AEM 設為單色或漸層）。`;
+            statusEl.className = 'status ok';
+          } else {
+            statusEl.textContent = 'Excel 轉換完成，尚未偵測到 AEM 色碼標記（可在文字前加上 [1]、[2] 或 [3]）。';
+            statusEl.className = 'status bad';
+          }
           
           // 資料成功產出，顯示複製按鈕
           copyBtn.style.display = 'block';
@@ -949,6 +1629,8 @@
         } catch (error) {
           console.error("轉換失敗：", error);
           outputEl.innerHTML = '<span class="error">檔案解析失敗，請確保上傳的是有效的 Excel/CSV 檔案。</span>';
+          statusEl.textContent = `Excel 轉換失敗：${error.message}`;
+          statusEl.className = 'status bad';
           copyBtn.style.display = 'none'; // 發生錯誤時隱藏按鈕
         }
       };
