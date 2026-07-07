@@ -1638,16 +1638,42 @@
       reader.readAsArrayBuffer(file);
     });
 
+    // 複製文字到剪貼簿（在非安全環境 file://、http:// 下 navigator.clipboard 不存在，需 fallback）
+    const copyTextToClipboard = function(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+      }
+      // Fallback：使用隱藏的 textarea + execCommand
+      return new Promise((resolve, reject) => {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.top = '-9999px';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        try {
+          const ok = document.execCommand('copy');
+          document.body.removeChild(textarea);
+          ok ? resolve() : reject(new Error('execCommand copy 失敗'));
+        } catch (err) {
+          document.body.removeChild(textarea);
+          reject(err);
+        }
+      });
+    };
+
     // 綁定複製按鈕事件
     $('#copy-btn').addEventListener('click', function() {
       const jsonText = $('#json-output').textContent;
       const btn = this;
 
-      navigator.clipboard.writeText(jsonText).then(() => {
+      copyTextToClipboard(jsonText).then(() => {
         // 複製成功的視覺回饋
         btn.textContent = '已複製！';
         btn.classList.add('success');
-        
+
         // 2秒後恢復原狀
         setTimeout(() => {
           btn.textContent = '複製 JSON';
@@ -1709,7 +1735,7 @@
       const htmlText = $('#html-output').textContent;
       const btn = this;
 
-      navigator.clipboard.writeText(htmlText).then(() => {
+      copyTextToClipboard(htmlText).then(() => {
         btn.textContent = '已複製！';
         setTimeout(() => {
           btn.textContent = '複製 HTML';
