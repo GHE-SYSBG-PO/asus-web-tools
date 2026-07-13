@@ -43,6 +43,12 @@
           <span class="nav-item__label">Fake Bookmarks</span>
           <span class="nav-item__badge">CMD</span>
         </button>
+        <div class="sidebar__section-label">Animation</div>
+        <button class="nav-item" data-tool="video-scrubbing" role="tab" aria-selected="false">
+          <span class="nav-item__icon">▶</span>
+          <span class="nav-item__label">Video Scrubbing</span>
+          <span class="nav-item__badge">Scroll</span>
+        </button>
       </nav>
 
       <div class="sidebar__footer">
@@ -75,6 +81,11 @@
       <section class="tool-panel hidden" id="panel-fake-bookmarks" role="tabpanel">
         <div id="fake-bookmarks-app"></div>
       </section>
+
+      <!-- Video Scrubbing Tool -->
+      <section class="tool-panel hidden" id="panel-video-scrubbing" role="tabpanel">
+        <div id="video-scrubbing-app"></div>
+      </section>
     </main>
   </div>
 
@@ -82,6 +93,7 @@
   <script src="tools/linear-gradient.js"></script>
   <script src="tools/excel-to-json.js"></script>
   <script src="tools/fake-bookmarks.js"></script>
+  <script src="tools/video-scrubbing.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
