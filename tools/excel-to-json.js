@@ -146,20 +146,6 @@
       color: var(--text-primary);
     }
 
-    #excel-to-json-app textarea {
-      width: 100%;
-      min-height: 220px;
-      resize: vertical;
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: var(--radius-sm);
-      padding: 12px;
-      color: var(--text-primary);
-      font-family: var(--font-mono);
-      font-size: 0.88rem;
-      line-height: 1.45;
-    }
-
     #excel-to-json-app .action-row {
       margin-top: 12px;
       display: flex;
@@ -182,16 +168,6 @@
     #excel-to-json-app .action-btn:hover {
       border-color: var(--accent);
       background: var(--bg-glass-hover);
-    }
-
-    #excel-to-json-app .action-btn.primary {
-      background: var(--accent);
-      color: #fff;
-      border-color: transparent;
-    }
-
-    #excel-to-json-app .action-btn.primary:hover {
-      background: var(--accent-2);
     }
 
     #excel-to-json-app .status {
@@ -467,14 +443,11 @@
       </div>
 
       <div class="json-html-group">
-        <h3>JSON 轉 HTML（Category 可收合 + Spec Table）</h3>
-        <label for="json-input">貼上 JSON：</label>
-        <textarea id="json-input" placeholder="請貼上 { products: [], rows: [] } JSON"></textarea>
+        <h3>輸出 HTML（僅供資料驗證檢視）</h3>
         <div class="action-row">
-          <button id="convert-json-btn" class="action-btn primary">驗證並轉換 HTML</button>
           <button id="copy-html-btn" class="action-btn" style="display:none;">複製 HTML</button>
         </div>
-        <div id="json-status" class="status">等待貼上 JSON...</div>
+        <div id="json-status" class="status">等待上傳資料...</div>
 
         <div class="output-group" aria-live="polite">
           <div class="output-header">
@@ -532,8 +505,12 @@
           return val !== undefined && val !== null && String(val).trim() !== "";
         });
       });
-      const productNames = productKeys.map((key, idx) => {
-        const name = String(key ?? "").trim();
+      // 如果「每一個」產品欄的標題都是空白，代表這份表根本沒有產品名稱可比較，
+      // 直接輸出空的 products（欄位資料仍保留在 values 裡），輸出時就不會顯示產品下拉選單。
+      const allProductHeadersBlank = productKeys.length > 0 && productKeys.every((key) => key.startsWith('__BLANK_'));
+      const productNames = allProductHeadersBlank ? [] : productKeys.map((key, idx) => {
+        const isBlankHeader = key.startsWith('__BLANK_');
+        const name = isBlankHeader ? "" : String(key ?? "").trim();
         return name || `Product ${idx + 1}`;
       });
 
@@ -563,11 +540,17 @@
             return (val !== undefined && val !== null && val !== "") ? String(val).trim() : "";
           });
 
+          // 將 Excel 橫向合併的欄位換算成產品索引分組，讓輸出表格可用 colspan 還原合併效果
+          const mergeGroups = (row.__mergedKeyGroups || [])
+            .map(group => group.map(key => productKeys.indexOf(key)).filter(idx => idx !== -1))
+            .filter(group => group.length > 1);
+
           return {
             type: "spec",
             name: specName,
             hidden: specHidden,
-            values: specValues
+            values: specValues,
+            ...(mergeGroups.length > 0 ? { mergeGroups } : {})
           };
         }
       }).filter(row => row !== null); // 【關鍵修正】：濾除完全空白的無效列
@@ -588,7 +571,177 @@
     }
 
     function toCellHtml(value) {
-      return escapeHtml(String(value ?? '').replace(/<br\s*\/?>(\s*)/gi, '\n')).replace(/\r?\n/g, '<br>');
+      // <b>/</b> 與 <<n>> 註腳需在 escape 前先用字串 token 保護起來，避免被跳脫成一般文字
+      const BOLD_OPEN = '__B_OPEN__';
+      const BOLD_CLOSE = '__B_CLOSE__';
+      const FOOTNOTE_TOKEN = '__FOOTNOTE_';
+      const withPlaceholders = String(value ?? '')
+        .replace(/<br\s*\/?>(\s*)/gi, '\n')
+        .replace(/<b>/gi, BOLD_OPEN)
+        .replace(/<\/b>/gi, BOLD_CLOSE)
+        .replace(/<<\s*(\d+)\s*>>/g, (_, num) => `${FOOTNOTE_TOKEN}${num}__`);
+      return escapeHtml(withPlaceholders)
+        .replace(/\r?\n/g, '<br>')
+        .split(BOLD_OPEN).join('<b>')
+        .split(BOLD_CLOSE).join('</b>')
+        .replace(/__FOOTNOTE_(\d+)__/g, (_, num) =>
+          `<sup class="footnote-num"><span aria-hidden="true">${num}</span><a href="#footnote-${num}" class="footnote-${num}" aria-label="Footnote ${num}"></a></sup>`);
+    }
+
+    function buildMergeOriginMap(worksheet) {
+      const merges = worksheet['!merges'] || [];
+      const originMap = {};
+      merges.forEach((range) => {
+        const originAddr = XLSX.utils.encode_cell({ r: range.s.r, c: range.s.c });
+        for (let r = range.s.r; r <= range.e.r; r += 1) {
+          for (let c = range.s.c; c <= range.e.c; c += 1) {
+            if (r === range.s.r && c === range.s.c) continue;
+            originMap[XLSX.utils.encode_cell({ r, c })] = originAddr;
+          }
+        }
+      });
+      return originMap;
+    }
+
+    function getCellDisplayValue(worksheet, address) {
+      const cell = worksheet[address];
+      if (!cell) return '';
+      if (cell.w !== undefined && cell.w !== null && cell.w !== '') return String(cell.w);
+      if (cell.v !== undefined && cell.v !== null) return String(cell.v);
+      return '';
+    }
+
+    /**
+     * 找出「同一列、橫跨多欄」的合併儲存格，依列號分組回傳欄位索引，
+     * 供後續轉換為產品欄位分組，讓輸出表格可用 colspan 還原合併效果。
+     */
+    function buildHorizontalMergeGroups(worksheet) {
+      const merges = worksheet['!merges'] || [];
+      const rowGroups = {};
+      merges.forEach((range) => {
+        if (range.s.r !== range.e.r) return; // 僅處理同一列的橫向合併
+        if (range.s.c === range.e.c) return; // 單欄不需記錄
+
+        const cols = [];
+        for (let c = range.s.c; c <= range.e.c; c += 1) cols.push(c);
+        if (!rowGroups[range.s.r]) rowGroups[range.s.r] = [];
+        rowGroups[range.s.r].push(cols);
+      });
+      return rowGroups;
+    }
+
+    function getSheetXmlForWorksheet(workbook, worksheet, sheetIndex) {
+      const guessPath = `xl/worksheets/sheet${sheetIndex + 1}.xml`;
+      const guessXml = getWorkbookFileText(workbook, [guessPath]);
+      if (guessXml) return guessXml;
+
+      // 檔名與工作表順序不一致時，改用 dimension ref 比對找出正確的工作表 XML
+      const worksheetRef = worksheet?.['!ref'] || '';
+      const files = workbook?.files ? Object.keys(workbook.files) : [];
+      const sheetCandidates = files
+        .filter((key) => /xl\/worksheets\/sheet\d+\.xml$/i.test(key))
+        .sort();
+
+      for (const key of sheetCandidates) {
+        const candidateXml = getWorkbookFileText(workbook, [key]);
+        if (!candidateXml) continue;
+        if (!worksheetRef) return candidateXml;
+        const dimMatch = candidateXml.match(/<dimension\s+ref="([^"]+)"/);
+        if (dimMatch && dimMatch[1] === worksheetRef) return candidateXml;
+      }
+
+      return sheetCandidates.length > 0 ? getWorkbookFileText(workbook, [sheetCandidates[0]]) : '';
+    }
+
+    function buildBoldAddressSet(workbook, worksheet, sheetIndex) {
+      const boldAddresses = new Set();
+
+      const fonts = workbook?.Styles?.Fonts || [];
+      const cellXfs = workbook?.Styles?.CellXf || [];
+      const boldStyleIds = new Set();
+      cellXfs.forEach((xf, styleId) => {
+        const font = fonts[xf?.fontId];
+        if (font?.bold) boldStyleIds.add(styleId);
+      });
+      if (boldStyleIds.size === 0) return boldAddresses;
+
+      const sheetXml = getSheetXmlForWorksheet(workbook, worksheet, sheetIndex);
+      if (!sheetXml) return boldAddresses;
+
+      const cellTagRegex = /<c\b[^>]*>/g;
+      let tagMatch;
+      while ((tagMatch = cellTagRegex.exec(sheetXml)) !== null) {
+        const tag = tagMatch[0];
+        const rMatch = tag.match(/\br="([A-Z]+\d+)"/);
+        const sMatch = tag.match(/\bs="(\d+)"/);
+        if (rMatch && sMatch && boldStyleIds.has(Number(sMatch[1]))) {
+          boldAddresses.add(rMatch[1]);
+        }
+      }
+
+      return boldAddresses;
+    }
+
+    /**
+     * 直接依 worksheet 的實際列/欄範圍讀取資料，取代 XLSX.utils.sheet_to_json：
+     * 1. 合併儲存格：非起始欄位補上起始欄位的值，避免被誤判為空白
+     * 2. 粗體文字：偵測到粗體樣式時，於文字前後補上 <b></b>
+     */
+    function sheetToFormattedRows(workbook, worksheet, sheetIndex) {
+      const ref = worksheet['!ref'];
+      if (!ref) return [];
+
+      const range = XLSX.utils.decode_range(ref);
+      const mergeOriginMap = buildMergeOriginMap(worksheet);
+      const horizontalMergeGroups = buildHorizontalMergeGroups(worksheet);
+      const boldAddresses = buildBoldAddressSet(workbook, worksheet, sheetIndex);
+
+      function resolveAddress(r, c) {
+        const address = XLSX.utils.encode_cell({ r, c });
+        return mergeOriginMap[address] || address;
+      }
+
+      const headerRow = range.s.r;
+      const headers = [];
+      // 標題為空的欄位仍保留資料，改用欄位索引產生佔位 key（例如 __BLANK_5），
+      // 避免整欄數值被當成無效欄位一起丟掉；formatSpecData 會再把這種 key 顯示為空白產品名稱。
+      const columnKeys = [];
+      for (let c = range.s.c; c <= range.e.c; c += 1) {
+        const headerText = getCellDisplayValue(worksheet, resolveAddress(headerRow, c)).trim();
+        headers[c] = headerText;
+        columnKeys[c] = headerText || `__BLANK_${c}`;
+      }
+
+      const rows = [];
+      for (let r = headerRow + 1; r <= range.e.r; r += 1) {
+        const row = {};
+        let hasContent = false;
+        for (let c = range.s.c; c <= range.e.c; c += 1) {
+          const key = columnKeys[c];
+
+          const address = resolveAddress(r, c);
+          let text = getCellDisplayValue(worksheet, address).trim();
+          if (text && boldAddresses.has(address)) text = `<b>${text}</b>`;
+          if (text) hasContent = true;
+          row[key] = text;
+        }
+
+        // 將該列的橫向合併欄位換算為欄位 key 分組，掛在非列舉屬性上，
+        // 避免混入 Object.keys() 判斷欄位用途的邏輯。
+        const mergedKeyGroups = (horizontalMergeGroups[r] || [])
+          .map((cols) => cols.map((c) => columnKeys[c]).filter(Boolean))
+          .filter((group) => group.length > 1);
+        if (mergedKeyGroups.length > 0) {
+          Object.defineProperty(row, '__mergedKeyGroups', {
+            value: mergedKeyGroups,
+            enumerable: false
+          });
+        }
+
+        if (hasContent) rows.push(row);
+      }
+
+      return rows;
     }
 
     function parseAemColorToken(value) {
@@ -888,7 +1041,7 @@
       if (!safeValue) return '';
 
       const safeUrl = escapeHtml(normalizeLinkUrl(safeValue));
-      const safeLabel = escapeHtml(getDisplaySpecName(specName));
+      const safeLabel = toCellHtml(getDisplaySpecName(specName));
       const linkStyle = getAemLinkStyle(parsedValue, '');
       return `<a class="comparison-link-btn${linkStyle.classPart}"${linkStyle.dataAttrs}${linkStyle.stylePart} href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeLabel}</a>`;
     }
@@ -897,66 +1050,61 @@
       return String(value ?? '').trim().toUpperCase() === 'TRUE';
     }
 
-    // isTrueFlag 也需在 output script 中定義
-    // (已在 convertJsonToHtml 的 script 字串中包含)
+    /**
+     * 依 spec.mergeGroups（Excel 原始橫向合併的產品索引分組）與目前顯示中的產品欄位，
+     * 算出每個要輸出的 <td> 對應哪個產品索引、要橫跨幾欄（colspan），還原合併儲存格的外觀。
+     */
+    function computeMergeSpans(mergeGroups, visible) {
+      const groups = Array.isArray(mergeGroups) ? mergeGroups : [];
 
-    function validateComparisonJson(data) {
-      const errors = [];
-
-      if (!data || typeof data !== 'object') {
-        errors.push('根節點必須是物件。');
-        return errors;
+      function groupIdOf(productIdx) {
+        for (let g = 0; g < groups.length; g += 1) {
+          if (groups[g].includes(productIdx)) return g;
+        }
+        return -1;
       }
 
-      if (!Array.isArray(data.products) || data.products.length === 0) {
-        errors.push('products 必須是非空陣列。');
-      } else if (data.products.some(p => typeof p !== 'string')) {
-        errors.push('products 內每一項都必須是字串。');
-      }
-
-      if (!Array.isArray(data.rows) || data.rows.length === 0) {
-        errors.push('rows 必須是非空陣列。');
-        return errors;
-      }
-
-      data.rows.forEach((row, index) => {
-        const rowNo = index + 1;
-        if (!row || typeof row !== 'object') {
-          errors.push(`rows[${rowNo}] 必須是物件。`);
-          return;
-        }
-
-        if (row.type !== 'category' && row.type !== 'spec') {
-          errors.push(`rows[${rowNo}] 的 type 只能是 category 或 spec。`);
-          return;
-        }
-
-        if (typeof row.name !== 'string' || !row.name.trim()) {
-          errors.push(`rows[${rowNo}] 的 name 必須是非空字串。`);
-        }
-
-        if (row.type === 'spec') {
-          if (!Array.isArray(row.values)) {
-            errors.push(`rows[${rowNo}] 是 spec 時，values 必須是陣列。`);
-            return;
-          }
-
-          if (Array.isArray(data.products) && row.values.length !== data.products.length) {
-            errors.push(`rows[${rowNo}] 的 values 長度 (${row.values.length}) 必須等於 products 長度 (${data.products.length})。`);
+      const spans = [];
+      let i = 0;
+      while (i < visible.length) {
+        const groupId = groupIdOf(visible[i]);
+        let span = 1;
+        if (groupId !== -1) {
+          while (i + span < visible.length && groupIdOf(visible[i + span]) === groupId) {
+            span += 1;
           }
         }
-      });
-
-      return errors;
+        spans.push({ productIdx: visible[i], span });
+        i += span;
+      }
+      return spans;
     }
+
+    // isTrueFlag / computeMergeSpans 也需在 output script 中定義
+    // (已在 convertJsonToHtml 的 script 字串中包含)
 
     function convertJsonToHtml(data) {
       const sections = buildComparisonSections(data.rows);
 
+      // products 為空時,欄數改以 rows 中第一個 spec 的 values 長度為準
+      const firstSpecWithValues = sections.flatMap((section) => section.specs).find((spec) => Array.isArray(spec.values));
+      const columnCount = data.products.length > 0
+        ? data.products.length
+        : (firstSpecWithValues ? firstSpecWithValues.values.length : 0);
+
       const inlineData = JSON.stringify({
         products: data.products,
+        columnCount,
         sections
       }).replace(/</g, '\\u003c');
+
+      const toolbarLines = data.products.length > 0 ? [
+        '  <div class="comparison-toolbar">',
+        '    <div class="comparison-spec-spacer" aria-hidden="true"></div>',
+        '    <div class="comparison-selectors" aria-label="產品選擇"></div>',
+        '    <div class="comparison-add-slot"></div>',
+        '  </div>'
+      ] : [];
 
       return [
         '<style>',
@@ -970,11 +1118,7 @@
         '.comparison-module .custom-option.is-disabled { color: #6b7280; cursor: default; }',
         '</style>',
         '<section class="comparison-module">',
-        '  <div class="comparison-toolbar">',
-        '    <div class="comparison-spec-spacer" aria-hidden="true"></div>',
-        '    <div class="comparison-selectors" aria-label="產品選擇"></div>',
-        '    <div class="comparison-add-slot"></div>',
-        '  </div>',
+        ...toolbarLines,
         '  <div class="comparison-sections"></div>',
         '</section>',
         '<script>',
@@ -984,8 +1128,11 @@
         '  const selectorsEl = root.querySelector(".comparison-selectors");',
         '  const sectionsEl = root.querySelector(".comparison-sections");',
         '  const addSlotEl = root.querySelector(".comparison-add-slot");',
-        '  const maxVisible = Math.min(4, data.products.length);',
-        '  let visible = data.products.length > 1 ? [0, 1] : [0];',
+        '  const hasProducts = data.products.length > 0;',
+        '  const maxVisible = hasProducts ? Math.min(4, data.products.length) : data.columnCount;',
+        '  let visible = hasProducts',
+        '    ? Array.from({ length: Math.min(2, data.products.length) }, (_, i) => i)',
+        '    : Array.from({ length: data.columnCount }, (_, i) => i);',
         '',
         '  function escapeHtml(text) {',
         '    return String(text)',
@@ -1005,6 +1152,30 @@
         '',
         '  function isTrueFlag(value) {',
         '    return String(value !== null && value !== undefined ? value : "").trim().toUpperCase() === "TRUE";',
+        '  }',
+        '',
+        '  function computeMergeSpans(mergeGroups, visible) {',
+        '    const groups = Array.isArray(mergeGroups) ? mergeGroups : [];',
+        '    function groupIdOf(productIdx) {',
+        '      for (let g = 0; g < groups.length; g += 1) {',
+        '        if (groups[g].includes(productIdx)) return g;',
+        '      }',
+        '      return -1;',
+        '    }',
+        '    const spans = [];',
+        '    let i = 0;',
+        '    while (i < visible.length) {',
+        '      const groupId = groupIdOf(visible[i]);',
+        '      let span = 1;',
+        '      if (groupId !== -1) {',
+        '        while (i + span < visible.length && groupIdOf(visible[i + span]) === groupId) {',
+        '          span += 1;',
+        '        }',
+        '      }',
+        '      spans.push({ productIdx: visible[i], span });',
+        '      i += span;',
+        '    }',
+        '    return spans;',
         '  }',
         '',
         '  function isLinkSpecName(specName) {',
@@ -1084,16 +1255,33 @@
         '    return { classPart: "", dataAttrs: "", stylePart };',
         '  }',
         '',
+        '  function toCellHtml(value) {',
+        '    const BOLD_OPEN = "__B_OPEN__";',
+        '    const BOLD_CLOSE = "__B_CLOSE__";',
+        '    const FOOTNOTE_TOKEN = "__FOOTNOTE_";',
+        '    const withPlaceholders = String(value ?? "")',
+        '      .replace(/<br\\s*\\/?>(\\s*)/gi, "\\n")',
+        '      .replace(/<b>/gi, BOLD_OPEN)',
+        '      .replace(/<\\/b>/gi, BOLD_CLOSE)',
+        '      .replace(/<<\\s*(\\d+)\\s*>>/g, (_, num) => `${FOOTNOTE_TOKEN}${num}__`);',
+        '    return escapeHtml(withPlaceholders)',
+        '      .replace(/\\r?\\n/g, "<br>")',
+        '      .split(BOLD_OPEN).join("<b>")',
+        '      .split(BOLD_CLOSE).join("</b>")',
+        '      .replace(/__FOOTNOTE_(\\d+)__/g, (_, num) =>',
+        '        `<sup class="footnote-num"><span aria-hidden="true">${num}</span><a href="#footnote-${num}" class="footnote-${num}" aria-label="Footnote ${num}"></a></sup>`);',
+        '  }',
+        '',
         '  function renderCellHtml(specName, rawValue, color = "") {',
         '    const parsedValue = parseAemColorToken(rawValue);',
         '    const safeValue = String(parsedValue.text || "").trim();',
         '    if (!isLinkSpecName(specName)) {',
-        '      const html = escapeHtml(safeValue.replace(/<br\\s*\\/?>(\\s*)/gi, "\\n")).replace(/\\r?\\n/g, "<br>");',
+        '      const html = toCellHtml(safeValue);',
         '      return applyAemTokenColor(html, parsedValue, color);',
         '    }',
         '    if (!safeValue) return "";',
         '    const safeUrl = escapeHtml(normalizeLinkUrl(safeValue));',
-        '    const safeLabel = escapeHtml(getDisplaySpecName(specName));',
+        '    const safeLabel = toCellHtml(getDisplaySpecName(specName));',
         '    const linkStyle = getAemLinkStyle(parsedValue, color);',
         '    return `<a class="comparison-link-btn${linkStyle.classPart}"${linkStyle.dataAttrs}${linkStyle.stylePart} href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeLabel}</a>`;',
         '  }',
@@ -1103,6 +1291,7 @@
         '  }',
         '',
         '  function buildSelectors() {',
+        '    if (!hasProducts) return;',
         '    selectorsEl.innerHTML = "";',
         '    visible.forEach((productIdx, colIdx) => {',
         '      const wrap = document.createElement("div");',
@@ -1231,7 +1420,7 @@
         '      const rows = [];',
         '      for (let i = 0; i < section.specs.length; i += 1) {',
         '        const spec = section.specs[i];',
-        '        const hiddenAttr = String(spec.hidden || "").toUpperCase() === "TRUE" ? " data-hidden=\"true\"" : "";',
+        '        const hiddenAttr = String(spec.hidden || "").toUpperCase() === "TRUE" ? " data-hidden=\\"true\\"" : "";',
         '',
         '        if (isLinkSpecName(spec.name)) {',
         '          const linkGroup = [spec];',
@@ -1259,36 +1448,37 @@
         '',
         '          rows.push(`<tr${hiddenAttr}><th scope="row" rowspan="${span}"></th>${linkCols}</tr>`);',
         '          for (let r = 1; r < span; r += 1) {',
-        '            rows.push("<tr class=\"comparison-link-row-spacer\"></tr>");',
+        '            rows.push(`<tr class="comparison-link-row-spacer"></tr>`);',
         '          }',
         '',
         '          i = j - 1;',
         '          continue;',
         '        }',
         '',
-        '        const valueCols = visible',
-        '          .map((idx) => {',
-        '            const rawValue = spec.values && spec.values[idx] !== undefined ? spec.values[idx] : "";',
-        '            return `<td>${renderCellHtml(spec.name, rawValue, "")}</td>`;',
+        '        const valueCols = computeMergeSpans(spec.mergeGroups, visible)',
+        '          .map(({ productIdx, span }) => {',
+        '            const rawValue = spec.values && spec.values[productIdx] !== undefined ? spec.values[productIdx] : "";',
+        '            const colspanAttr = span > 1 ? ` colspan="${span}"` : "";',
+        '            return `<td${colspanAttr}>${renderCellHtml(spec.name, rawValue, "")}</td>`;',
         '          })',
         '          .join("");',
         '',
         '        const parsedSpecName = parseAemColorToken(spec.name);',
         '        const cleanSpecName = getDisplaySpecName(parsedSpecName.text);',
-        '        const headerText = applyTextColor(escapeHtml(cleanSpecName), "", parsedSpecName);',
+        '        const headerText = applyTextColor(toCellHtml(cleanSpecName), "", parsedSpecName);',
         '        rows.push(`<tr${hiddenAttr}><th scope="row">${headerText}</th>${valueCols}</tr>`);',
         '      }',
         '',
         '      const rowsHtml = rows.join("");',
         '',
         '      return [',
-        '        "<details class=\"comparison-category\" open>",',
-        '        `  <summary>${escapeHtml(section.name)}</summary>`,',
-        '        "  <table class=\"comparison-table\">",',
+        '        `<details class="comparison-category" open>`,',
+        '        `  <summary>${toCellHtml(section.name)}</summary>`,',
+        '        `  <table class="comparison-table">`,',
         '        `    <colgroup>${colgroupHtml}</colgroup>`,',
         '        `    <tbody>${rowsHtml}</tbody>`,',
-        '        "  </table>",',
-        '        "</details>"',
+        '        `  </table>`,',
+        '        `</details>`',
         '      ].join("\\n");',
         '    }).join("\\n\\n");',
         '',
@@ -1330,15 +1520,26 @@
 
     function renderInteractivePreview(data, mountEl) {
       const sections = buildComparisonSections(data.rows);
-      let visible = data.products.length > 1 ? [0, 1] : [0];
+      const hasProducts = data.products.length > 0;
+      const firstSpecWithValues = sections.flatMap((section) => section.specs).find((spec) => Array.isArray(spec.values));
+      const columnCount = hasProducts
+        ? data.products.length
+        : (firstSpecWithValues ? firstSpecWithValues.values.length : 0);
+      let visible = hasProducts
+        ? Array.from({ length: Math.min(2, data.products.length) }, (_, i) => i)
+        : Array.from({ length: columnCount }, (_, i) => i);
 
-      mountEl.innerHTML = [
-        '<section class="comparison-module">',
+      const toolbarLines = hasProducts ? [
         '  <div class="comparison-toolbar">',
         '    <div class="comparison-spec-spacer" aria-hidden="true"></div>',
         '    <div class="comparison-selectors" aria-label="產品選擇"></div>',
         '    <div class="comparison-add-slot"></div>',
-        '  </div>',
+        '  </div>'
+      ] : [];
+
+      mountEl.innerHTML = [
+        '<section class="comparison-module">',
+        ...toolbarLines,
         '  <div class="comparison-sections"></div>',
         '</section>'
       ].join('');
@@ -1353,7 +1554,7 @@
       const selectorsEl = mountEl.querySelector('.comparison-selectors');
       const sectionsEl = mountEl.querySelector('.comparison-sections');
       const addSlotEl = mountEl.querySelector('.comparison-add-slot');
-      const maxVisible = Math.min(4, data.products.length);
+      const maxVisible = hasProducts ? Math.min(4, data.products.length) : columnCount;
 
       function getNextProductIndex() {
         for (let i = 0; i < data.products.length; i += 1) {
@@ -1363,6 +1564,7 @@
       }
 
       function buildSelectors() {
+        if (!hasProducts) return;
         selectorsEl.innerHTML = '';
 
         visible.forEach((productIdx, colIdx) => {
@@ -1529,16 +1731,17 @@
               continue;
             }
 
-            const valueCols = visible
-              .map((idx) => {
-                const rawValue = spec.values && spec.values[idx] !== undefined ? spec.values[idx] : '';
-                return `<td>${renderPreviewCellHtml(spec.name, rawValue)}</td>`;
+            const valueCols = computeMergeSpans(spec.mergeGroups, visible)
+              .map(({ productIdx, span }) => {
+                const rawValue = spec.values && spec.values[productIdx] !== undefined ? spec.values[productIdx] : '';
+                const colspanAttr = span > 1 ? ` colspan="${span}"` : '';
+                return `<td${colspanAttr}>${renderPreviewCellHtml(spec.name, rawValue)}</td>`;
               })
               .join('');
 
             const parsedSpecName = parseAemColorToken(spec.name);
             const cleanSpecName = getDisplaySpecName(parsedSpecName.text);
-            const headerText = applyTextColor(escapeHtml(cleanSpecName), '', parsedSpecName);
+            const headerText = applyTextColor(toCellHtml(cleanSpecName), '', parsedSpecName);
             rows.push(`<tr><th scope="row">${headerText}</th>${valueCols}</tr>`);
           }
 
@@ -1546,7 +1749,7 @@
 
           return [
             '<details class="comparison-category" open>',
-            `  <summary>${escapeHtml(section.name)}</summary>`,
+            `  <summary>${toCellHtml(section.name)}</summary>`,
             '  <table class="comparison-table">',
             `    <colgroup>${colgroupHtml}</colgroup>`,
             `    <tbody>${rowsHtml}</tbody>`,
@@ -1588,21 +1791,28 @@
       const outputEl = $('#json-output');
       const copyBtn = $('#copy-btn');
       const statusEl = $('#json-status');
+      const htmlOutputEl = $('#html-output');
+      const previewEl = $('#html-preview');
+      const copyHtmlBtn = $('#copy-html-btn');
 
       reader.onload = function(event) {
         try {
           const data = new Uint8Array(event.target.result);
-          const workbook = XLSX.read(data, { type: 'array', raw: true });
-          
+          const workbook = XLSX.read(data, { type: 'array', raw: true, bookFiles: true });
+
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
+          const sheetIndex = workbook.SheetNames.indexOf(firstSheetName);
 
-          // 轉換 JSON 時加入 raw: false，強制輸出畫面上看到的原始格式
-          const rawJson = XLSX.utils.sheet_to_json(worksheet, { defval: "", raw: false });
-          
+          // 取代 XLSX.utils.sheet_to_json：自行依合併儲存格補值、依粗體樣式補上 <b></b>
+          const rawJson = sheetToFormattedRows(workbook, worksheet, sheetIndex);
+
           if (rawJson.length === 0) {
             outputEl.innerHTML = '<span class="error">表格沒有內容或格式不正確。</span>';
             copyBtn.style.display = 'none'; // 發生錯誤時隱藏按鈕
+            htmlOutputEl.textContent = '尚未轉換';
+            previewEl.innerHTML = '';
+            copyHtmlBtn.style.display = 'none';
             return;
           }
 
@@ -1611,8 +1821,9 @@
 
           outputEl.textContent = JSON.stringify(finalOutputJson, null, 2);
           const htmlText = convertJsonToHtml(finalOutputJson);
-          $('#html-output').textContent = htmlText;
-          renderInteractivePreview(finalOutputJson, $('#html-preview'));
+          htmlOutputEl.textContent = htmlText;
+          renderInteractivePreview(finalOutputJson, previewEl);
+          copyHtmlBtn.style.display = 'inline-block';
 
           const tokenCount = countAemTokens(finalOutputJson);
           if (tokenCount > 0) {
@@ -1622,7 +1833,7 @@
             statusEl.textContent = 'Excel 轉換完成，尚未偵測到 AEM 色碼標記（可在文字前加上 [1]、[2] 或 [3]）。';
             statusEl.className = 'status bad';
           }
-          
+
           // 資料成功產出，顯示複製按鈕
           copyBtn.style.display = 'block';
 
@@ -1632,6 +1843,9 @@
           statusEl.textContent = `Excel 轉換失敗：${error.message}`;
           statusEl.className = 'status bad';
           copyBtn.style.display = 'none'; // 發生錯誤時隱藏按鈕
+          htmlOutputEl.textContent = '尚未轉換';
+          previewEl.innerHTML = '';
+          copyHtmlBtn.style.display = 'none';
         }
       };
 
@@ -1683,52 +1897,6 @@
         console.error("複製失敗：", err);
         alert("抱歉，複製失敗，請手動選取文字。");
       });
-    });
-
-    $('#convert-json-btn').addEventListener('click', function() {
-      const inputText = $('#json-input').value.trim();
-      const statusEl = $('#json-status');
-      const htmlOutputEl = $('#html-output');
-      const copyHtmlBtn = $('#copy-html-btn');
-      const previewEl = $('#html-preview');
-
-      if (!inputText) {
-        statusEl.textContent = '請先貼上 JSON 內容。';
-        statusEl.className = 'status bad';
-        htmlOutputEl.textContent = '尚未轉換';
-        previewEl.innerHTML = '';
-        copyHtmlBtn.style.display = 'none';
-        return;
-      }
-
-      let parsed;
-      try {
-        parsed = JSON.parse(inputText);
-      } catch (error) {
-        statusEl.textContent = `JSON 格式錯誤：${error.message}`;
-        statusEl.className = 'status bad';
-        htmlOutputEl.textContent = '尚未轉換';
-        previewEl.innerHTML = '';
-        copyHtmlBtn.style.display = 'none';
-        return;
-      }
-
-      const errors = validateComparisonJson(parsed);
-      if (errors.length > 0) {
-        statusEl.textContent = `驗證失敗：${errors.join(' | ')}`;
-        statusEl.className = 'status bad';
-        htmlOutputEl.textContent = '尚未轉換';
-        previewEl.innerHTML = '';
-        copyHtmlBtn.style.display = 'none';
-        return;
-      }
-
-      const htmlText = convertJsonToHtml(parsed);
-      htmlOutputEl.textContent = htmlText;
-      renderInteractivePreview(parsed, previewEl);
-      statusEl.textContent = '驗證成功，已產生可收合 Category 的 HTML Table。';
-      statusEl.className = 'status ok';
-      copyHtmlBtn.style.display = 'inline-block';
     });
 
     $('#copy-html-btn').addEventListener('click', function() {
